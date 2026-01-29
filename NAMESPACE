@@ -1,0 +1,6 @@
+useDynLib(MuniCandS, .registration = TRUE)
+importFrom(Rcpp, sourceCpp)
+importFrom("stats", "pchisq", "pnorm", "qchisq", "runif")
+importFrom("utils", "combn")
+export(MuniCandS)
+export(MUCS)

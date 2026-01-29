@@ -1,0 +1,2648 @@
+plot(X[,1],X[,2])
+plot(sort(X[,1]),sort(X[,2]))
+dataproc(Z,'N')
+if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))
+X
+type
+type='N'
+if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))
+X
+pval
+pvals
+variance
+T_H2
+MuniCandS <- function(Z, type, hmin = 1,hmax = Inf, repet = 999, semilla = 123) {#
+  if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))#
+  return(c(m_p_value = m_p_value, s_p_value = s_p_value))#
+}#
+  # Initial processing of the data  #
+ dataproc=function(Z,type){#
+  X <- Z#
+  # To test uniformity on S apply a map M:S->C that preserves uniformity (using C++)#
+  if(type=='US'){#
+  	X <- c()#
+  	for(nn in 1:nrow(Z))X <- rbind(X,S2C(Z[nn,]))#
+  	}#
+  # To test isotropy write Z=rho times Z0, Z0 in S#
+  # then apply M to Z0 and rank/(n+1) to diag(rho)#
+  if(type=='I'){#
+  	rho=sqrt(rowSums(Z^2))#
+  	Z0=Z/rho#
+	X=c()#
+  	for(nn in 1:nrow(Z))X=rbind(X,S2C(Z0[nn,]))#
+  	X=cbind(X,rank(rho))#
+  	}#
+  # To test normality, standardize the sample and apply Phi#
+  if(type=='N'){#
+  	ZC=Z-rep(1,nrow(Z))%*%t(colMeans(Z))#
+  	variance=t(ZC)%*%ZC/nrow(Z)#
+  	eig=eigen(variance)#
+  	X=pnorm(ZC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+  }	else variance<-NA#
+return(list(X=X,variance=variance))#
+}#
+#
+   # Generation of the subsets H of J={0,1,...,p}#
+  genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+#  if(type=='I') H_list[[p]] <- NULL#
+  return(H_list)#
+}#
+#
+  #Computation of the statistics ||T_H||^2#
+  calcest=function(X,H_list){#
+	T_H2=c()#
+	for(H in H_list)T_H2=c(T_H2,calc_est(X,as.integer(H)))#
+	return(T_H2)#
+	}#
+  # Simulation of samples under the null hypothesis#
+  simsamp=function(n,p,variance=NA,type=type){#
+	if(type=='N'){X <- rmvnorm(n,rep(0,p),variance)#
+		XC=X-rep(1,nrow(X))%*%t(colMeans(X))#
+  	variance=t(XC)%*%XC/nrow(X)#
+  	eig=eigen(variance)#
+  	X=pnorm(XC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+		}else X <- matrix(runif(n*p),n,p)#
+	if(type=='I')X[,p] <- rank(X[,p])/(n+1)#
+	return(X)#
+}#
+#
+  # Estimation of the p-values by simulation#
+  calcpvals=function(T_H2,n,p,repet,H_list,variance=diag(p),type){#
+  	counter=rep(0,length(T_H2))#
+  	for(rep in 1:repet){#
+  		if(type=='N')samp=simsamp(n,p,variance=variance,type=type) else samp=simsamp(n,p,type=type)#
+  		T2=calcest(samp,H_list)#
+  		counter=counter+(sign(T2-T_H2)+1)/2#
+  	}#
+  	return(counter/repet)#
+  }#
+#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+double calc_est(NumericMatrix X, IntegerVector H) {#
+  int n = X.nrow();#
+  double T = 0.0;#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (int j = 0; j < H.size(); ++j) {#
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)#
+        double val_h = X(h, col);#
+        double val_i = X(i, col);#
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+  return T / n;#
+}#
+')#
+S2C=function(Z){#
+	if(is.matrix(Z)==TRUE) n=nrow(Z) else n=1#
+	if(n==1)U=Cpi2C(S2Cpi(Z)) else {#
+	U=c()#
+	for(i in 1:n)U=rbind(U,Cpi2C(S2Cpi(Z[i,])))}#
+	return(U)#
+}#
+cppFunction('#
+NumericVector Cpi2C(NumericVector phi) {#
+  int p = phi.size();#
+  NumericVector u(p);#
+#
+  for (int j = 0; j < p - 1; ++j) {#
+    // Compute I_j(phi_j) and normalize#
+    double num = 0.0, denom = 0.0;#
+    int N = 1000;#
+    double h = M_PI / N;#
+    for (int i = 0; i <= N; ++i) {#
+      double t = i * h;#
+      double w = (i == 0 || i == N) ? 0.5 : 1.0;#
+      double f = pow(sin(t), p - j - 1);#
+      if (t <= phi[j]) num += w * f;#
+      denom += w * f;#
+    }#
+    u[j] = h * num / (h * denom);#
+  }#
+#
+  // Final coordinate: φ_p / (2π)#
+  u[p - 1] = phi[p - 1] / (2.0 * M_PI);#
+#
+  return u;#
+}#
+')#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')
+power(50,3,'N','N',B=100)
+power(50,3,'I','I',B=1000)
+power(50,3,'N','N',B=1000)
+MuniCandS <- function(Z, type, hmin = 1,hmax = Inf, repet = 999, semilla = 123) {#
+  if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))#
+  return(c(m_p_value = m_p_value, s_p_value = s_p_value))#
+}#
+#
+if (!requireNamespace('mvtnorm', quietly = TRUE))install.packages('mvtnorm')#
+library('Rcpp')#
+  # Initial processing of the data  #
+ dataproc=function(Z,type){#
+  X <- Z#
+  # To test uniformity on S apply a map M:S->C that preserves uniformity (using C++)#
+  if(type=='US'){#
+  	X <- c()#
+  	for(nn in 1:nrow(Z))X <- rbind(X,S2C(Z[nn,]))#
+  	}#
+  # To test isotropy write Z=rho times Z0, Z0 in S#
+  # then apply M to Z0 and rank/(n+1) to diag(rho)#
+  if(type=='I'){#
+  	rho=sqrt(rowSums(Z^2))#
+  	Z0=Z/rho#
+	X=c()#
+  	for(nn in 1:nrow(Z))X=rbind(X,S2C(Z0[nn,]))#
+  	X=cbind(X,rank(rho))#
+  	}#
+  # To test normality, standardize the sample and apply Phi#
+  if(type=='N'){#
+  	ZC=Z-rep(1,nrow(Z))%*%t(colMeans(Z))#
+  	variance=t(ZC)%*%ZC/nrow(Z)#
+  	eig=eigen(variance)#
+  	X=pnorm(ZC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+  }	else variance<-NA#
+return(list(X=X,variance=variance))#
+}#
+#
+   # Generation of the subsets H of J={0,1,...,p}#
+  genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+#  if(type=='I') H_list[[p]] <- NULL#
+  return(H_list)#
+}#
+#
+  #Computation of the statistics ||T_H||^2#
+  calcest=function(X,H_list){#
+	T_H2=c()#
+	for(H in H_list)T_H2=c(T_H2,calc_est(X,as.integer(H)))#
+	return(T_H2)#
+	}#
+  # Simulation of samples under the null hypothesis#
+  simsamp=function(n,p,variance=NA,type=type){#
+	if(type=='N'){X <- rmvnorm(n,rep(0,p),variance)#
+		XC=X-rep(1,nrow(X))%*%t(colMeans(X))#
+  	variance=t(XC)%*%XC/nrow(X)#
+  	eig=eigen(variance)#
+  	X=pnorm(XC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+		}else X <- matrix(runif(n*p),n,p)#
+	if(type=='I')X[,p] <- rank(X[,p])/(n+1)#
+	return(X)#
+}#
+#
+  # Estimation of the p-values by simulation#
+  calcpvals=function(T_H2,n,p,repet,H_list,variance=diag(p),type){#
+  	counter=rep(0,length(T_H2))#
+  	for(rep in 1:repet){#
+  		if(type=='N')samp=simsamp(n,p,variance=variance,type=type) else samp=simsamp(n,p,type=type)#
+  		T2=calcest(samp,H_list)#
+  		counter=counter+(sign(T2-T_H2)+1)/2#
+  	}#
+  	return(counter/repet)#
+  }#
+#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+double calc_est(NumericMatrix X, IntegerVector H) {#
+  int n = X.nrow();#
+  double T = 0.0;#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (int j = 0; j < H.size(); ++j) {#
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)#
+        double val_h = X(h, col);#
+        double val_i = X(i, col);#
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+  return T / n;#
+}#
+')#
+S2C=function(Z){#
+	if(is.matrix(Z)==TRUE) n=nrow(Z) else n=1#
+	if(n==1)U=Cpi2C(S2Cpi(Z)) else {#
+	U=c()#
+	for(i in 1:n)U=rbind(U,Cpi2C(S2Cpi(Z[i,])))}#
+	return(U)#
+}#
+cppFunction('#
+NumericVector Cpi2C(NumericVector phi) {#
+  int p = phi.size();#
+  NumericVector u(p);#
+#
+  for (int j = 0; j < p - 1; ++j) {#
+    // Compute I_j(phi_j) and normalize#
+    double num = 0.0, denom = 0.0;#
+    int N = 1000;#
+    double h = M_PI / N;#
+    for (int i = 0; i <= N; ++i) {#
+      double t = i * h;#
+      double w = (i == 0 || i == N) ? 0.5 : 1.0;#
+      double f = pow(sin(t), p - j - 1);#
+      if (t <= phi[j]) num += w * f;#
+      denom += w * f;#
+    }#
+    u[j] = h * num / (h * denom);#
+  }#
+#
+  // Final coordinate: φ_p / (2π)#
+  u[p - 1] = phi[p - 1] / (2.0 * M_PI);#
+#
+  return u;#
+}#
+')#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')
+Z=matrix(rnorm(150),50,3)
+MuniCandS <- function(Z, type, hmin = 1,hmax = Inf, repet = 999, semilla = 123) {#
+  if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))#
+  return(c(m_p_value = m_p_value, s_p_value = s_p_value))#
+}#
+#
+if (!requireNamespace('mvtnorm', quietly = TRUE))install.packages('mvtnorm')#
+library('Rcpp')#
+  # Initial processing of the data  #
+ dataproc=function(Z,type){#
+  X <- Z#
+  # To test uniformity on S apply a map M:S->C that preserves uniformity (using C++)#
+  if(type=='US'){#
+  	X <- c()#
+  	for(nn in 1:nrow(Z))X <- rbind(X,S2C(Z[nn,]))#
+  	}#
+  # To test isotropy write Z=rho times Z0, Z0 in S#
+  # then apply M to Z0 and rank/(n+1) to diag(rho)#
+  if(type=='I'){#
+  	rho=sqrt(rowSums(Z^2))#
+  	Z0=Z/rho#
+	X=c()#
+  	for(nn in 1:nrow(Z))X=rbind(X,S2C(Z0[nn,]))#
+  	X=cbind(X,rank(rho)/(nrow(Z)+1))#
+  	}#
+  # To test normality, standardize the sample and apply Phi#
+  if(type=='N'){#
+  	ZC=Z-rep(1,nrow(Z))%*%t(colMeans(Z))#
+  	variance=t(ZC)%*%ZC/nrow(Z)#
+  	eig=eigen(variance)#
+  	X=pnorm(ZC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+  }	else variance<-NA#
+return(list(X=X,variance=variance))#
+}#
+#
+   # Generation of the subsets H of J={0,1,...,p}#
+  genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+#  if(type=='I') H_list[[p]] <- NULL#
+  return(H_list)#
+}#
+#
+  #Computation of the statistics ||T_H||^2#
+  calcest=function(X,H_list){#
+	T_H2=c()#
+	for(H in H_list)T_H2=c(T_H2,calc_est(X,as.integer(H)))#
+	return(T_H2)#
+	}#
+  # Simulation of samples under the null hypothesis#
+  simsamp=function(n,p,variance=NA,type=type){#
+	if(type=='N'){X <- rmvnorm(n,rep(0,p),variance)#
+		XC=X-rep(1,nrow(X))%*%t(colMeans(X))#
+  	variance=t(XC)%*%XC/nrow(X)#
+  	eig=eigen(variance)#
+  	X=pnorm(XC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+		}else X <- matrix(runif(n*p),n,p)#
+	if(type=='I')X[,p] <- rank(X[,p])/(n+1)#
+	return(X)#
+}#
+#
+  # Estimation of the p-values by simulation#
+  calcpvals=function(T_H2,n,p,repet,H_list,variance=diag(p),type){#
+  	counter=rep(0,length(T_H2))#
+  	for(rep in 1:repet){#
+  		if(type=='N')samp=simsamp(n,p,variance=variance,type=type) else samp=simsamp(n,p,type=type)#
+  		T2=calcest(samp,H_list)#
+  		counter=counter+(sign(T2-T_H2)+1)/2#
+  	}#
+  	return(counter/repet)#
+  }#
+#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+double calc_est(NumericMatrix X, IntegerVector H) {#
+  int n = X.nrow();#
+  double T = 0.0;#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (int j = 0; j < H.size(); ++j) {#
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)#
+        double val_h = X(h, col);#
+        double val_i = X(i, col);#
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+  return T / n;#
+}#
+')#
+S2C=function(Z){#
+	if(is.matrix(Z)==TRUE) n=nrow(Z) else n=1#
+	if(n==1)U=Cpi2C(S2Cpi(Z)) else {#
+	U=c()#
+	for(i in 1:n)U=rbind(U,Cpi2C(S2Cpi(Z[i,])))}#
+	return(U)#
+}#
+cppFunction('#
+NumericVector Cpi2C(NumericVector phi) {#
+  int p = phi.size();#
+  NumericVector u(p);#
+#
+  for (int j = 0; j < p - 1; ++j) {#
+    // Compute I_j(phi_j) and normalize#
+    double num = 0.0, denom = 0.0;#
+    int N = 1000;#
+    double h = M_PI / N;#
+    for (int i = 0; i <= N; ++i) {#
+      double t = i * h;#
+      double w = (i == 0 || i == N) ? 0.5 : 1.0;#
+      double f = pow(sin(t), p - j - 1);#
+      if (t <= phi[j]) num += w * f;#
+      denom += w * f;#
+    }#
+    u[j] = h * num / (h * denom);#
+  }#
+#
+  // Final coordinate: φ_p / (2π)#
+  u[p - 1] = phi[p - 1] / (2.0 * M_PI);#
+#
+  return u;#
+}#
+')#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')
+power=function(n,p,alte,type,B){#
+	power=c(0,0)#
+	set.seed(123)#
+	plot(0,0,xlim=c(0,B),col='white')#
+ 	for(b in 1:B){#
+ 		if(alte=='UC')Z=matrix(runif(n*p),n,p)#
+ 		if(alte=='US'){Z=matrix(rnorm(n*p+n),n,p+1)#
+ 			Z=Z/sqrt(rowSums(Z^2))}#
+ 		if(alte=='I')Z=matrix(rnorm(n*p),n,p)#
+ 		if(alte=='N')Z=matrix(rnorm(n*p),n,p)#
+ 		pvals=MuniCandS(Z,type)#
+ 		power=power+(sign(c(.05,.05)-pvals)+c(1,1))/2#
+ 		lines(b,0,type='p')#
+	}#
+ 	return(100*power/B)#
+ }
+power(50,3,'I','I',1000)
+MuniCandS <- function(Z, type, hmin = 1,hmax = Inf, repet = 999, semilla = 123) {#
+  if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))#
+  return(c(m_p_value = m_p_value, s_p_value = s_p_value))#
+}#
+#
+if (!requireNamespace('mvtnorm', quietly = TRUE))install.packages('mvtnorm')#
+library('Rcpp')#
+  # Initial processing of the data  #
+ dataproc=function(Z,type){#
+  X <- Z#
+  # To test uniformity on S apply a map M:S->C that preserves uniformity (using C++)#
+  if(type=='US'){#
+  	X <- c()#
+  	for(nn in 1:nrow(Z))X <- rbind(X,S2C(Z[nn,]))#
+  	}#
+  # To test isotropy write Z=rho times Z0, Z0 in S#
+  # then apply M to Z0 and rank/(n+1) to diag(rho)#
+  if(type=='I'){#
+  	rho=sqrt(rowSums(Z^2))#
+  	Z0=Z/rho#
+	X=c()#
+  	for(nn in 1:nrow(Z))X=rbind(X,S2C(Z0[nn,]))#
+  	X=cbind(X,rank(rho)/(nrow(Z)+1))#
+  	}#
+  # To test normality, standardize the sample and apply Phi#
+  if(type=='N'){#
+  	ZC=Z-rep(1,nrow(Z))%*%t(colMeans(Z))#
+  	variance=t(ZC)%*%ZC/nrow(Z)#
+  	eig=eigen(variance)#
+  	X=pnorm(ZC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+  }	else variance<-NA#
+return(list(X=X,variance=variance))#
+}#
+#
+   # Generation of the subsets H of J={0,1,...,p}#
+  genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+ if(type=='I') H_list[[p]] <- NULL#
+  return(H_list)#
+}#
+#
+  #Computation of the statistics ||T_H||^2#
+  calcest=function(X,H_list){#
+	T_H2=c()#
+	for(H in H_list)T_H2=c(T_H2,calc_est(X,as.integer(H)))#
+	return(T_H2)#
+	}#
+  # Simulation of samples under the null hypothesis#
+  simsamp=function(n,p,variance=NA,type=type){#
+	if(type=='N'){X <- rmvnorm(n,rep(0,p),variance)#
+		XC=X-rep(1,nrow(X))%*%t(colMeans(X))#
+  	variance=t(XC)%*%XC/nrow(X)#
+  	eig=eigen(variance)#
+  	X=pnorm(XC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+		}else X <- matrix(runif(n*p),n,p)#
+	if(type=='I')X[,p] <- rank(X[,p])/(n+1)#
+	return(X)#
+}#
+#
+  # Estimation of the p-values by simulation#
+  calcpvals=function(T_H2,n,p,repet,H_list,variance=diag(p),type){#
+  	counter=rep(0,length(T_H2))#
+  	for(rep in 1:repet){#
+  		if(type=='N')samp=simsamp(n,p,variance=variance,type=type) else samp=simsamp(n,p,type=type)#
+  		T2=calcest(samp,H_list)#
+  		counter=counter+(sign(T2-T_H2)+1)/2#
+  	}#
+  	return(counter/repet)#
+  }#
+#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+double calc_est(NumericMatrix X, IntegerVector H) {#
+  int n = X.nrow();#
+  double T = 0.0;#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (int j = 0; j < H.size(); ++j) {#
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)#
+        double val_h = X(h, col);#
+        double val_i = X(i, col);#
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+  return T / n;#
+}#
+')#
+S2C=function(Z){#
+	if(is.matrix(Z)==TRUE) n=nrow(Z) else n=1#
+	if(n==1)U=Cpi2C(S2Cpi(Z)) else {#
+	U=c()#
+	for(i in 1:n)U=rbind(U,Cpi2C(S2Cpi(Z[i,])))}#
+	return(U)#
+}#
+cppFunction('#
+NumericVector Cpi2C(NumericVector phi) {#
+  int p = phi.size();#
+  NumericVector u(p);#
+#
+  for (int j = 0; j < p - 1; ++j) {#
+    // Compute I_j(phi_j) and normalize#
+    double num = 0.0, denom = 0.0;#
+    int N = 1000;#
+    double h = M_PI / N;#
+    for (int i = 0; i <= N; ++i) {#
+      double t = i * h;#
+      double w = (i == 0 || i == N) ? 0.5 : 1.0;#
+      double f = pow(sin(t), p - j - 1);#
+      if (t <= phi[j]) num += w * f;#
+      denom += w * f;#
+    }#
+    u[j] = h * num / (h * denom);#
+  }#
+#
+  // Final coordinate: φ_p / (2π)#
+  u[p - 1] = phi[p - 1] / (2.0 * M_PI);#
+#
+  return u;#
+}#
+')#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')
+power(50,3,'I','I',1000)
+MuniCandS <- function(Z, type, hmin = 1,hmax = Inf, repet = 999, semilla = 123) {#
+  if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  if(type=='I') H_list[[p]] <- NULL#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))#
+  return(c(m_p_value = m_p_value, s_p_value = s_p_value))#
+}#
+#
+if (!requireNamespace('mvtnorm', quietly = TRUE))install.packages('mvtnorm')#
+library('Rcpp')#
+  # Initial processing of the data  #
+ dataproc=function(Z,type){#
+  X <- Z#
+  # To test uniformity on S apply a map M:S->C that preserves uniformity (using C++)#
+  if(type=='US'){#
+  	X <- c()#
+  	for(nn in 1:nrow(Z))X <- rbind(X,S2C(Z[nn,]))#
+  	}#
+  # To test isotropy write Z=rho times Z0, Z0 in S#
+  # then apply M to Z0 and rank/(n+1) to diag(rho)#
+  if(type=='I'){#
+  	rho=sqrt(rowSums(Z^2))#
+  	Z0=Z/rho#
+	X=c()#
+  	for(nn in 1:nrow(Z))X=rbind(X,S2C(Z0[nn,]))#
+  	X=cbind(X,rank(rho)/(nrow(Z)+1))#
+  	}#
+  # To test normality, standardize the sample and apply Phi#
+  if(type=='N'){#
+  	ZC=Z-rep(1,nrow(Z))%*%t(colMeans(Z))#
+  	variance=t(ZC)%*%ZC/nrow(Z)#
+  	eig=eigen(variance)#
+  	X=pnorm(ZC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+  }	else variance<-NA#
+return(list(X=X,variance=variance))#
+}#
+#
+   # Generation of the subsets H of J={0,1,...,p}#
+  genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+  return(H_list)#
+}#
+#
+  #Computation of the statistics ||T_H||^2#
+  calcest=function(X,H_list){#
+	T_H2=c()#
+	for(H in H_list)T_H2=c(T_H2,calc_est(X,as.integer(H)))#
+	return(T_H2)#
+	}#
+  # Simulation of samples under the null hypothesis#
+  simsamp=function(n,p,variance=NA,type=type){#
+	if(type=='N'){X <- rmvnorm(n,rep(0,p),variance)#
+		XC=X-rep(1,nrow(X))%*%t(colMeans(X))#
+  	variance=t(XC)%*%XC/nrow(X)#
+  	eig=eigen(variance)#
+  	X=pnorm(XC%*%eig$vectors%*%diag(eig$values^(-.5))%*%t(eig$vectors))#
+		}else X <- matrix(runif(n*p),n,p)#
+	if(type=='I')X[,p] <- rank(X[,p])/(n+1)#
+	return(X)#
+}#
+#
+  # Estimation of the p-values by simulation#
+  calcpvals=function(T_H2,n,p,repet,H_list,variance=diag(p),type){#
+  	counter=rep(0,length(T_H2))#
+  	for(rep in 1:repet){#
+  		if(type=='N')samp=simsamp(n,p,variance=variance,type=type) else samp=simsamp(n,p,type=type)#
+  		T2=calcest(samp,H_list)#
+  		counter=counter+(sign(T2-T_H2)+1)/2#
+  	}#
+  	return(counter/repet)#
+  }#
+#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+double calc_est(NumericMatrix X, IntegerVector H) {#
+  int n = X.nrow();#
+  double T = 0.0;#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (int j = 0; j < H.size(); ++j) {#
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)#
+        double val_h = X(h, col);#
+        double val_i = X(i, col);#
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+  return T / n;#
+}#
+')#
+S2C=function(Z){#
+	if(is.matrix(Z)==TRUE) n=nrow(Z) else n=1#
+	if(n==1)U=Cpi2C(S2Cpi(Z)) else {#
+	U=c()#
+	for(i in 1:n)U=rbind(U,Cpi2C(S2Cpi(Z[i,])))}#
+	return(U)#
+}#
+cppFunction('#
+NumericVector Cpi2C(NumericVector phi) {#
+  int p = phi.size();#
+  NumericVector u(p);#
+#
+  for (int j = 0; j < p - 1; ++j) {#
+    // Compute I_j(phi_j) and normalize#
+    double num = 0.0, denom = 0.0;#
+    int N = 1000;#
+    double h = M_PI / N;#
+    for (int i = 0; i <= N; ++i) {#
+      double t = i * h;#
+      double w = (i == 0 || i == N) ? 0.5 : 1.0;#
+      double f = pow(sin(t), p - j - 1);#
+      if (t <= phi[j]) num += w * f;#
+      denom += w * f;#
+    }#
+    u[j] = h * num / (h * denom);#
+  }#
+#
+  // Final coordinate: φ_p / (2π)#
+  u[p - 1] = phi[p - 1] / (2.0 * M_PI);#
+#
+  return u;#
+}#
+')#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')
+power(50,3,'I','I',1000)
+MuniCandS <- function(Z, type, hmin = 1,hmax = Inf, repet = 999, semilla = 123) {#
+  if (!is.matrix(Z)) stop("Z debe ser una matriz")#
+#
+  n <- nrow(Z)#
+  datap=dataproc(Z,type)#
+  X=datap$X#
+  variance=datap$variance#
+  p <- ncol(X)#
+  H_list=genlist(hmin,hmax,p)#
+  if(type=='I') H_list[[p]] <- NULL#
+  T_H2=calcest(X,H_list)#
+  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)#
+  pmin=min(pvals)#
+  suma=sum(qchisq(1 - pvals, df = 1))#
+  m_p_value <- 1 - (1 - pmin)^length(H_list)#
+  s_p_value <- 1 - pchisq(suma, df = length(H_list))#
+  return(c(m_p_value = m_p_value, s_p_value = s_p_value))#
+}#
+#
+if (!requireNamespace('mvtnorm', quietly = TRUE))install.packages('mvtnorm')#
+library('mvtnorm')#
+  # Initial processing of the data  #
+dataproc <- function(Z, type) {#
+  n <- nrow(Z)#
+  p <- ncol(Z)#
+  X <- Z#
+  variance <- NA#
+#
+  if (type == "US") {#
+    X <- matrix(NA, n, p)#
+    for (i in 1:n) X[i, ] <- S2C(Z[i, ])#
+  }#
+#
+  if (type == "I") {#
+    rho <- sqrt(rowSums(Z^2))#
+    Z0 <- Z / rho#
+    X <- matrix(NA, n, p)#
+    for (i in 1:n) X[i, ] <- S2C(Z0[i, ])#
+    X <- cbind(X, rank(rho) / (n + 1))#
+  }#
+#
+  if (type == "N") {#
+    ZC <- scale(Z, center = TRUE, scale = FALSE)#
+    variance <- crossprod(ZC) / n#
+    eig <- eigen(variance)#
+    X <- pnorm(ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors))#
+  }#
+#
+  list(X = X, variance = variance)#
+}#
+#
+   # Generation of the subsets H of J={0,1,...,p}#
+  genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+  return(H_list)#
+}#
+#
+  #Computation of the statistics ||T_H||^2#
+calcest <- function(X, H_list) {#
+  X <- as.matrix(X)#
+  sapply(H_list, function(H) calc_est_arma(X, as.integer(H) - 1)) # Armadillo usa 0-based#
+}#
+  # Simulation of samples under the null hypothesis#
+simsamp <- function(n, p, variance = diag(p), type) {#
+  if (type == "N") {#
+    X <- mvtnorm::rmvnorm(n, rep(0, p), variance)#
+    XC <- scale(X, center = TRUE, scale = FALSE)#
+    eig <- eigen(variance)#
+    X <- pnorm(XC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors))#
+  } else {#
+    X <- matrix(runif(n * p), n, p)#
+    if (type == "I") X[, p] <- rank(X[, p]) / (n + 1)#
+  }#
+  X#
+}#
+#
+  # Estimation of the p-values by simulation#
+calcpvals <- function(T_H2, n, p, repet, H_list, variance = diag(p), type) {#
+  library(parallel)#
+  sim_stats <- mclapply(1:repet, function(rep) {#
+    samp <- simsamp(n, p, variance, type)#
+    calcest(samp, H_list)#
+  }, mc.cores = parallel::detectCores())#
+#
+  sim_matrix <- do.call(rbind, sim_stats)#
+  colMeans(sim_matrix >= matrix(T_H2, nrow = repet, ncol = length(T_H2), byrow = TRUE))#
+}#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+double calc_est(NumericMatrix X, IntegerVector H) {#
+  int n = X.nrow();#
+  double T = 0.0;#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (int j = 0; j < H.size(); ++j) {#
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)#
+        double val_h = X(h, col);#
+        double val_i = X(i, col);#
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+  return T / n;#
+}#
+')#
+#
+S2C <- function(Z) {#
+  if (is.matrix(Z)) {#
+    n <- nrow(Z)#
+    U <- matrix(NA, n, ncol(Z))#
+    for (i in 1:n) U[i, ] <- Cpi2C(S2Cpi(Z[i, ]))#
+  } else {#
+    U <- Cpi2C(S2Cpi(Z))#
+  }#
+  U#
+}#
+#
+install.packages("RcppArmadillo")#
+#
+cppFunction('#
+// [[Rcpp::depends(RcppArmadillo)]]#
+#include <RcppArmadillo.h>#
+using namespace Rcpp;#
+#
+// [[Rcpp::export]]#
+double calc_est_arma(const arma::mat& X, const arma::uvec& H) {#
+  int n = X.n_rows;#
+  double T = 0.0;#
+#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (size_t j = 0; j < H.n_elem; ++j) {#
+        double val_h = X(h, H[j]);#
+        double val_i = X(i, H[j]);#
+        double term = (std::pow(val_h, 2.0) + std::pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+#
+  return T / n;#
+}#
+')#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')
+cppFunction('#
+// [[Rcpp::depends(RcppArmadillo)]]#
+#include <RcppArmadillo.h>#
+using namespace Rcpp;#
+#
+// [[Rcpp::export]]#
+double calc_est_arma(const arma::mat& X, const arma::uvec& H) {#
+  int n = X.n_rows;#
+  double T = 0.0;#
+#
+  for (int h = 0; h < n; ++h) {#
+    for (int i = 0; i < n; ++i) {#
+      double prod = 1.0;#
+      for (size_t j = 0; j < H.n_elem; ++j) {#
+        double val_h = X(h, H[j]);#
+        double val_i = X(i, H[j]);#
+        double term = (std::pow(val_h, 2.0) + std::pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;#
+        prod *= term;#
+      }#
+      T += prod;#
+    }#
+  }#
+#
+  return T / n;#
+}#
+')
+Sys.which("clang")#
+Sys.which("make")
+CXXFLAGS = -std=c++11
+ls()
+rm("funM")
+ls()
+include.packages("~/Library/CloudStorage/Dropbox/MultivariateTests/UnifenS/R-package/MuniCandS_0.1.0.tar.gz")
+include_packages("~/Library/CloudStorage/Dropbox/MultivariateTests/UnifenS/R-package/MuniCandS_0.1.0.tar.gz")
+install.packages("~/Library/CloudStorage/Dropbox/MultivariateTests/UnifenS/R-package/MuniCandS_0.1.0.tar.gz")
+library(MuniCandS)
+MuniCandS
+library("MuniCandS")
+MuniCandS
+ls()
+cómo cargar paquete .tar en R
+MuniCandS
+library(MuniCandS)
+ls()
+?MuniCandS
+install.packages('~/Desktop/MuniCandS')
+ls()
+load('/Volumes/ToshibaBlack/UnifenSbis/R-package/pvals_50_6d')
+load('/Volumes/ToshibaBlack/UnifenSbis/R-package/pvals_50_6')
+sort(pvals[,1])[1:100]
+sort(pvals[,1])[100]
+sort(pvals[,1])[100:200]
+sort(pvals[,1])[200:500]
+sort(pvals[,1])[500:1000]
+parallel::detectCores()
+for(n in c(50)){#
+for(p in 3:6){#
+nrep=1000#
+if (!requireNamespace("parallel", quietly = TRUE)) install.packages("parallel")#
+library(parallel)#
+cores <- detectCores()#
+#
+if (!requireNamespace("progressr", quietly = TRUE)) install.packages("progressr")#
+library(progressr)#
+handlers("txtprogressbar")  # Fuerza barra visible en consola#
+#
+   if (!requireNamespace("future.apply", quietly = TRUE)) install.packages("future.apply")#
+    library(future.apply)#
+#
+fun=function(i){#
+	X=matrix(runif(n*p),n,p)#
+	pv=MuniCandS(X,'UC')#
+	#pv#
+	return(pv)#
+	}#
+#
+set.seed(123)#
+#
+ pvals = future.apply::future_lapply(1:nrep, fun, future.seed = TRUE)#
+  pvals=do.call(rbind,pvals)#
+plot(sort(pvals[,1]))#
+lines(sort(pvals[,2]))#
+#
+save(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''),pvals)#
+print(c(n,p))}}
+par(mfcol=c(2,4))#
+plot(c(0,1),c(0,1),type='l',col='gray')
+plot(c(0,1),c(0,1),type='l',col='gray')
+getwd()
+par(mfcol=c(2,4))#
+for(i in 3:6){load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+plot(c(0,1),c(0,1),type='l',col='gray')#
+lines(1:10000/10001,sort(pvals[,1],col='blue'))#
+lines(1:10000/10001,sort(pvals[,2]),col='green')#
+}#
+parf(mfrow=c(1,1))
+par(mfcol=c(2,4))#
+for(i in 3:6){load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+plot(c(0,1),c(0,1),type='l',col='gray')#
+lines(1:10000/10001,sort(pvals[,1]),col='blue')#
+lines(1:10000/10001,sort(pvals[,2]),col='green')#
+}#
+parf(mfrow=c(1,1))
+par(mfcol=c(2,4))#
+for(i in 3:6){load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+plot(c(0,1),c(0,1),type='l',col='gray')#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+parf(mfrow=c(1,1))
+par(mfcol=c(2,2))#
+for(i in 3:6){load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+plot(c(0,1),c(0,1),type='l',col='gray')#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+plot(c(0,1),c(0,1),type='l',col='gray')#
+for(i in 3:6{#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}
+plot(c(0,1),c(0,1),type='l',col='gray')#
+for(i in 3:6){#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}
+n=50#
+plot(c(0,1),c(0,1),type='l',col='gray')#
+for(p in 3:6){#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}
+n=50#
+par(mfcol=c(2,4))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfcol=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfcol=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p),sep=''),xlab('ststistic order'),ylab('estimated p-value')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfcol=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p)),sep=''),xlab('ststistic order'),ylab('estimated p-value')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfcol=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p),sep=''),xlab('ststistic order'),ylab('estimated p-value'))#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfcol=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p),sep=''),xlab='ststistic order',ylab='estimated p-value')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfrow=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p),sep=''),xlab='ststistic order',ylab='estimated p-value')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfrow=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p),sep=''),xlab='fractional rank',ylab='estimated p-value')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+n=50#
+par(mfrow=c(2,2))#
+for(p in 3:6){#
+	plot(c(0,1),c(0,1),type='l',col='gray',main=paste('p=',as.character(p),sep=''),xlab='empirical percentile',ylab='estimated p-value')#
+load(file=paste('pvals_',as.character(n),'_',as.character(p),sep=''))	#
+lines(1:1000/1001,sort(pvals[,1]),col='blue')#
+lines(1:1000/1001,sort(pvals[,2]),col='green')#
+}#
+par(mfrow=c(1,1))
+1/(22*(3*365+366))
+9/(22*(3*365+366))
+0.00028/9
+28/9
+install.packages('/Volumes/ToshibaBlack/UnifenSbis/R-package-MuniCandS/MuniCandS_0.1.0.tar.gz')
+MuiniCandS
+MuniCandS
+MUCS
+library(MuniCandS)
+MuniCandS
+MUCS
+ls()
+pvdata
+install.packages('~/Library/CloudStorage/Dropbox/MultivariateTests/UnifenS/R-package-MuniCandS/MuniCandS_0.1.0.tar.gz')
+library(MuniCandS)
+dim(pvdata)
+load("/Users/enriquem.cabana/Library/CloudStorage/Dropbox/MultivariateTests/UnifenS/R-package-MuniCandS/MuniCandS/R/sysdata.rda")
+ls()
+MUCS
+X=matrix(runif(150),50,3)
+MUCS(X,type='UC')
+pvdata[1:10,1,50,2]
+dim(pvdata)
+pvdata[1:10,1,1,2]
+evlin
+dir()
+load('presiondata')
+inic='07/10/25 00:00'
+fin='01/12/25 00:00'
+frame=seq(inic,fin,'01:00')
+asPOSIXct(inic)
+as.POSIXct(inic)
+inicP=as.POSIXct(inic)
+finP=as.POSIXct(fin)
+frame=seq(as.numeric(inicP),as.numeric(finP),24*3600)
+inicn=as.numeric(inicP)
+finn=as.numeric(finP)
+inicn
+finn
+inic
+inicP
+inicP=as.POSIXct(inic,format("%d/%m/%y %H:%M"))
+inicP=as.POSIXct(inic,format("%d/%m/%y %H:%M -03"))
+tiempo
+time
+as.POSIXct("07/10/25 07:26",format="%d/%M/%y %H:%M")
+as.POSIXct("07/11/25 07:26",format="%d/%M/%y %H:%M")
+as.POSIXct("07/10/25 07:26",format="%d/%M/%y %H:%M")
+as.POSIXct("07/09/25 07:26",format="%d/%M/%y %H:%M")
+as.POSIXct("07/09/25 07:26",format="%d/%m/%y %H:%M")
+as.POSIXct("07/10/25 00:00",format="%d/%m/%y %H:%M")
+as.numeric("2025-10-07 -03")
+time[1]
+tiempo[1]
+as.numeric(as.POSIXct(tiempo[1],format='%d/%m/%y %H:%M'))
+as.numeric(as.POSIXct("07/10/25 00:00",format='%d/%m/%y %H:%M'))
+as.numeric(as.POSIXct("08/10/25 00:00",format='%d/%m/%y %H:%M'))
+1759892400-1759806000
+24*3600
+as.numeric(as.POSIXct("01/12/25 00:00",format='%d/%m/%y %H:%M'))
+frame=seq(1759806000,1764558000,86400)
+plot(time,0*time,type='l',ylim=c(0,180),xlab='',ylab='presión')
+ls()
+plot(as.POSIXct(tiempo),0*time,type='l',ylim=c(0,180),xlab='',ylab='presión')
+abscisas=as.POSIXct(tiempo)
+plot(abscisas,0*tiempo,type='l',ylim=c(0,180),xlab='días',ylab='presión')
+plot(abscisas,0*time,type='l',ylim=c(0,180),xlab='días',ylab='presión')
+for(i in 1:30){#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]))#
+}
+for(i in 1:30){#
+	lines(c(abscisas[i],abscisas[i]),c(sistole[i],diastole[i]))#
+}
+plot(abscisas,0*time,type='l',ylim=c(0,180),xlab='días',ylab='presión')#
+for(i in 1:30){#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]))#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]),type='p')#
+}
+time=as.POSIXct(tiempo,format="%d/%M/%y %H:%M")#
+plot(time,0*time,type='l',ylim=c(0,180),xlab='días',ylab='presión')#
+for(i in 1:30){#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]))#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]),type='p')#
+}
+time=as.POSIXct(tiempo,format="%d/%M/%y %H:%M")#
+plot(time,rep(0,length(time)),type='l',ylim=c(0,180),xlab='días',ylab='presión')#
+for(i in 1:30){#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]))#
+	lines(c(time[i],time[i]),c(sistole[i],diastole[i]),type='p')#
+}
+library(xtable)
+methods(xtable)
+X=matrix(runif(30),10,3)
+xtable(X)
+xtable(X,label='pteque')
+xtable(X,caption='una tabla',label='pteque')
+aa=c('a','b','c','d','e','f','g','h','i','j')
+X=rbind(aa,X)
+X
+X=matrix(runif(30),10,3)
+Y=cbind(aa,X)
+xtable(Y)
+D=as.dataframe(Y)
+xtable.matrix(X)
+dim(X)
+rownames(X)=aa
+xtable(X)
+18308+40.4*142.5
+library(mnt)#
+#
+library(mvtnorm)#
+library(PearsonDS)#
+#
+library(MuniCandS)
+MUCS
+powN=c()#
+#
+aplitests=function(sample){#
+sink(tempfile())#
+res <- test.BHEP(sample)$Decision#
+res=c(res,test.HZ(sample)$Decision)#
+res=c(res,test.HJM(sample)$Decision)#
+res=c(res,test.DEHU(sample)$Decision)#
+res=c(res,test.SR(sample)$Decision)#
+res=c(res,MUCS(sample))#
+sink()#
+return(res)#
+}#
+#
+plot(0,0,xlim=c(0,n_rep),ylim=c(0,n_rep))#
+#
+avance=function(i){if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+  	}#
+n=70#
+p=4#
+#
+n_rep=1000#
+#
+powN=c()#
+#
+altNMix=function(pr,mu,Sigma)(1-pr)*matrix(rnorm(n*p),n,p)+pr*rmvnorm(n,rep(mu,p),Sigma)#
+#
+B=function(p)matrix(.9,p,p)+.1*diag(p)#
+#
+print('Alternativa-1')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.5,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))#
+#
+print('Alternativa-2')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.7,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))#
+#
+print('Alternativa-3')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.9,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))
+powN=c()#
+#
+aplitests=function(sample){#
+sink(tempfile())#
+res <- test.BHEP(sample)$Decision#
+res=c(res,test.HZ(sample)$Decision)#
+res=c(res,test.HJM(sample)$Decision)#
+res=c(res,test.DEHU(sample)$Decision)#
+res=c(res,test.SR(sample)$Decision)#
+res=c(res,MUCS(sample))#
+sink()#
+return(res)#
+}#
+n=70#
+p=4#
+#
+n_rep=1000#
+plot(0,0,xlim=c(0,n_rep),ylim=c(0,n_rep))#
+#
+avance=function(i){if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+  	}#
+powN=c()#
+#
+altNMix=function(pr,mu,Sigma)(1-pr)*matrix(rnorm(n*p),n,p)+pr*rmvnorm(n,rep(mu,p),Sigma)#
+#
+B=function(p)matrix(.9,p,p)+.1*diag(p)#
+#
+print('Alternativa-1')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.5,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))
+powN=c()#
+#
+aplitests=function(sample){#
+sink(tempfile())#
+res <- test.BHEP(sample)$Decision#
+res=c(res,test.HZ(sample)$Decision)#
+res=c(res,test.HJM(sample)$Decision)#
+res=c(res,test.DEHU(sample)$Decision)#
+res=c(res,test.SR(sample)$Decision)#
+res=c(res,MUCS(sample,type='N',full=TRUE))#
+sink()#
+return(res)#
+}#
+n=70#
+p=4#
+#
+n_rep=1000#
+plot(0,0,xlim=c(0,n_rep),ylim=c(0,n_rep))#
+#
+avance=function(i){if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+  	}#
+powN=c()#
+#
+altNMix=function(pr,mu,Sigma)(1-pr)*matrix(rnorm(n*p),n,p)+pr*rmvnorm(n,rep(mu,p),Sigma)#
+#
+B=function(p)matrix(.9,p,p)+.1*diag(p)#
+#
+print('Alternativa-1')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.5,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))
+powN
+2+2
+sink()
+2+2
+sink()
+sink
+library(mnt)#
+#
+library(mvtnorm)#
+library(PearsonDS)#
+#
+library(MuniCandS)#
+#
+powN=c()
+powN=c()#
+#
+aplitests=function(sample){#
+#sink(tempfile())#
+res <- test.BHEP(sample)$Decision#
+res=c(res,test.HZ(sample)$Decision)#
+res=c(res,test.HJM(sample)$Decision)#
+res=c(res,test.DEHU(sample)$Decision)#
+res=c(res,test.SR(sample)$Decision)#
+res=c(res,MUCS(sample,type='N',full=TRUE))#
+#sink()#
+return(res)#
+}#
+n=70#
+p=4
+n_rep=1000#
+plot(0,0,xlim=c(0,n_rep),ylim=c(0,n_rep))#
+#
+avance=function(i){if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+  	}#
+powN=c()#
+#
+altNMix=function(pr,mu,Sigma)(1-pr)*matrix(rnorm(n*p),n,p)+pr*rmvnorm(n,rep(mu,p),Sigma)#
+#
+B=function(p)matrix(.9,p,p)+.1*diag(p)#
+#
+print('Alternativa-1')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.5,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))
+test.HJM
+powN=c()#
+#
+aplitests=function(sample){#
+#sink(tempfile())#
+res <- test.BHEP(sample)$Decision#
+res=c(res,test.HZ(sample)$Decision)#
+res=c(res,test.HJM(sample,MC.rep=100)$Decision)#
+res=c(res,test.DEHU(sample)$Decision)#
+res=c(res,test.SR(sample)$Decision)#
+res=c(res,MUCS(sample,type='N',full=TRUE))#
+#sink()#
+return(res)#
+}#
+n=70#
+p=4#
+#
+n_rep=1000#
+plot(0,0,xlim=c(0,n_rep),ylim=c(0,n_rep))#
+#
+avance=function(i){if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+  	}#
+powN=c()#
+#
+altNMix=function(pr,mu,Sigma)(1-pr)*matrix(rnorm(n*p),n,p)+pr*rmvnorm(n,rep(mu,p),Sigma)#
+#
+B=function(p)matrix(.9,p,p)+.1*diag(p)#
+#
+print('Alternativa-1')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.5,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))
+powN=c()#
+#
+aplitests=function(sample){#
+sink(tempfile())#
+res <- test.BHEP(sample)$Decision#
+res=c(res,test.HZ(sample)$Decision)#
+#res=c(res,test.HJM(sample)$Decision)#
+res=c(res,test.DEHU(sample)$Decision)#
+res=c(res,test.SR(sample)$Decision)#
+res=c(res,MUCS(sample,type='N',full=TRUE))#
+while(sink.number>0)sink()#
+return(res)#
+}#
+n=70#
+p=4#
+#
+n_rep=1000#
+plot(0,0,xlim=c(0,n_rep),ylim=c(0,n_rep))#
+#
+avance=function(i){if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+  	}#
+powN=c()#
+#
+altNMix=function(pr,mu,Sigma)(1-pr)*matrix(rnorm(n*p),n,p)+pr*rmvnorm(n,rep(mu,p),Sigma)#
+#
+B=function(p)matrix(.9,p,p)+.1*diag(p)#
+#
+print('Alternativa-1')#
+set.seed(123)#
+result=c()#
+for(rep in 1:n_rep){avance(rep)#
+	sample=altNMix(.5,3,diag(p))#
+	result=rbind(result,aplitests(sample))#
+}#
+powN=rbind(powN,100*colMeans(result))
+sink.number
+2+2
+ls()
+powN
+ls()
+load('/Volumes/ToshibaBlack/MuniCandS/LasPotencias/powN')
+powN
+1.0365*3500
+1.051*3500
+library(Directional)#
+library(sphunif)#
+library(MASS)#
+library(Rcpp)#
+library(mvtnorm)#
+library(Rfast)#
+#
+install.packages('/Volumes/ToshibaBlack/MuniCandS/R-package-MuniCandS/MuniCandS_0.1.0.tar.gz')#
+library(MuniCandS)#
+#
+nn=c(50,100,200)#
+Rcpp::sourceCpp('/Volumes/ToshibaBlack/MuniCandS/R-package-MuniCandS/MuniCandS/src/funciones.cpp')#
+evlin=function(u,f){ff=c(0,sort(f),1)#
+	sf=max(which(ff<=u))#
+	if(sf==length(ff))return(1) else return(((u-ff[sf])*(sf)+(ff[sf+1]-u)*(sf-1))/((ff[sf+1]-ff[sf])*(length(f)+1)))#
+ }#
+# Código para la prueba HR, por no estar en spunif ni en otro paquete#
+HR.test <- function(x, B = 500) {#
+  # x: matriz n x p de vectores unitarios#
+  n <- nrow(x)#
+  p <- ncol(x)#
+  # Estadística observada: suma de cosenos entre pares#
+  theta <- acos(pmin(pmax(x %*% t(x), -1), 1))  # matriz de ángulos#
+  stat_obs <- sum(cos(theta[lower.tri(theta)]))#
+  # Bootstrap bajo H0: datos uniformes en la esfera#
+  stat_boot <- numeric(B)#
+  for (b in 1:B) {#
+    u <- matrix(rnorm(n * p), n, p)#
+    u <- u / sqrt(rowSums(u^2))#
+    theta_b <- acos(pmin(pmax(u %*% t(u), -1), 1))#
+    stat_boot[b] <- sum(cos(theta_b[lower.tri(theta_b)]))#
+  }#
+  pval <- mean(stat_boot >= stat_obs)#
+  list(statistic = stat_obs, p.value = pval)#
+}#
+#
+library(copula)#
+muesnorm=function(n,p,rho){mues=c()#
+	for(i in 1:n)mues=rbind(mues,C2S(rCopula(1,normalCopula(rho,p))))#
+	return(mues)#
+}#
+muesclay=function(n,p,kk){#
+	copula_clayton <- claytonCopula(param = kk, dim = p)#
+	mues <- C2S(rCopula(n, copula_clayton))#
+	return(mues)#
+}#
+#
+muesgumbel=function(n,p,kk){#
+	copula_gumbel <- gumbelCopula(param = kk, dim = p)#
+	mues <- C2S(rCopula(n, copula_gumbel))#
+	return(mues)#
+}#
+#
+if (!requireNamespace('Rcpp', quietly = TRUE))install.packages('Rcpp')#
+library('Rcpp')#
+#
+cppFunction('#
+NumericVector S2Cpi(NumericVector x) {#
+	int p = x.size() - 1;#
+	NumericVector phi(p);#
+	for (int j = 0; j < p; ++j) {#
+    double denom = 1.0;#
+    for (int k = 0; k < j; ++k) {#
+      denom *= sin(phi[k]);#
+    }#
+    phi[j] = acos(x[j] / (denom == 0 ? 1.0 : denom));#
+  }#
+  if ( x[p] < 0 ) {#
+        phi[p-1]=2*M_PI-phi[p-1];#
+    } #
+  return phi;#
+}#
+')#
+#
+Cpi2S=function(Phi){#
+	Phi=c(Phi,0)#
+	Z=cos(Phi[1])#
+	for(j in 2:(length(Phi)))Z=c(Z,cos(Phi[j])*prod(sin(Phi[1:(j-1)])))#
+	return(Z)#
+}#
+#
+cppFunction('#
+NumericVector Cpi2C(NumericVector phi) {#
+  int p = phi.size();#
+  NumericVector u(p);#
+#
+  for (int j = 0; j < p - 1; ++j) {#
+    // Compute I_j(phi_j) and normalize#
+    double num = 0.0, denom = 0.0;#
+    int N = 1000;#
+    double h = M_PI / N;#
+    for (int i = 0; i <= N; ++i) {#
+      double t = i * h;#
+      double w = (i == 0 || i == N) ? 0.5 : 1.0;#
+      double f = pow(sin(t), p - j - 1);#
+      if (t <= phi[j]) num += w * f;#
+      denom += w * f;#
+    }#
+    u[j] = h * num / (h * denom);#
+  }#
+#
+  // Final coordinate: φ_p / (2π)#
+  u[p - 1] = phi[p - 1] / (2.0 * M_PI);#
+#
+  return u;#
+}#
+')#
+#
+U6=c()#
+for(phi in seq(0,pi,length.out=1000*pi))U6=rbind(U6,Cpi2C(c(rep(phi,5),2*phi)))#
+plot(U6[,1],type='l')#
+for(i in 2:p)lines(U6[,i],col=i)#
+C2Cpi=function(U){#
+	p=length(U)#
+	if(p>6)print('La dimensión no debe ser mayor que 6')#
+	phi=c()#
+	for (i in 1:p)phi=c(phi,max(which(U6[,6-p+i]<=U[i]))/1000)#
+	phi[p]=2*phi[p]#
+	return(phi)#
+}#
+#
+C2S=function(U){#
+	n=nrow(U)#
+	Z=c()#
+	for(i in 1:n)Z=rbind(Z,Cpi2S(C2Cpi(U[i,])))#
+	return(Z)#
+}#
+#
+S2C=function(Z){#
+	if(is.matrix(Z)==TRUE) n=nrow(Z) else n=1#
+	if(n==1)U=Cpi2C(S2Cpi(Z)) else {#
+	U=c()#
+	for(i in 1:n)U=rbind(U,Cpi2C(S2Cpi(Z[i,])))}#
+	return(U)#
+}#
+calpowUS=function(n,p,alte,kk,n_sim){#
+# Definiciones de las alternativas#
+#
+# 1. VMF con concentración#
+mu1 <- c(1, rep(0, p - 1))#
+mu1 <- mu1 / sqrt(sum(mu1^2))#
+alt_vmf <- rvmf(n, mu1, k = kk)#
+#
+# 2. Mezcla de VMF#
+mu1 <- c(1, rep(0, p - 1))#
+mu1 <- mu1 / sqrt(sum(mu1^2))#
+mu2 <- c(0, 1, rep(0, p - 2))#
+mu2 <- mu2 / sqrt(sum(mu2^2))#
+bin=rbinom(1,n,.5)#
+alt_mix <- rbind(rvmf(bin, mu1, k = kk), rvmf(n-bin, mu2, k = kk))#
+#
+# 3. Proyección de normal anisotrópica#
+Sigma <- diag(c(1+kk, rep(1, p - 1)))#
+raw_aniso <- MASS::mvrnorm(n, mu = rep(0, p), Sigma = Sigma)#
+alt_aniso <- raw_aniso / sqrt(rowSums(raw_aniso^2))#
+#
+# 4. Proyección de cópula normal#
+Z <- matrix(rnorm(n*p),n,p)#
+ZZ <-Z[,p]+kk*Z[,1]#
+for(i in 1:(p-1))ZZ<-cbind(Z[,i]+kk*Z[,i+1])#
+alt_copula <- ZZ/sqrt(rowSums(ZZ^2))#
+#
+# 5. Proyección de normales rho-correlacionadas#
+Sigma=matrix(rep(kk/10,p^2),p,p)+diag(rep(1-kk/10,p))#
+Z=rmvnorm(n,mu=rep(0,p),sigma=Sigma)#
+sample=Z/sqrt(rowSums(Z^2))#
+plot(0,0,xlim=c(0,n_sim),ylim=c(0,n_sim))#
+#
+results <- matrix(NA, nrow = n_sim, ncol = 9)#
+colnames(results) <- c("Rayleigh", "Bingham", "Sobolev", "Giné Fn","HR","max","sum","maxp","sump")#
+set.seed(123)#
+for (i in 1:n_sim) {if(i==10*floor(i/10)){#
+		lines(i,i,type='p')#
+		 Sys.sleep(0.01)       # Pausa para que se vea el punto#
+  				flush.console()}       # Asegura que se actualice la consola#
+if(alte==1)  sample <- rvmf(n, mu1, k = kk)  # alternativa fija#
+if(alte==2) {bin=rbinom(1,n,.5)#
+	sample <- rbind(rvmf(bin, mu1, k = kk), rvmf(n-bin, mu2, k = kk))}#
+if(alte==3){ raw_aniso <- MASS::mvrnorm(n, mu = rep(0, p), Sigma = diag(c(1+2*kk, rep(1, p - 1))))#
+ sample <- raw_aniso / sqrt(rowSums(raw_aniso^2))}#
+if(alte==4){Z <- matrix(rnorm(n*p),n,p)#
+ZZ <-Z[,p]+kk*Z[,1]#
+for (ij in 2:p)ZZ=cbind(ZZ,Z[,ij-1]+kk*Z[,ij])#
+sample <- ZZ/sqrt(rowSums(ZZ^2))}#
+if(alte==5){Sigma <- matrix(rep(kk/5,p^2),p,p)+diag(rep(1-kk/5,p))#
+Z <- rmvnorm(n,mu=rep(0,p),sigma=Sigma)#
+sample <- Z/sqrt(rowSums(Z^2))}#
+#
+if(alte==6){sample=muesnorm(n,p,kk/10)}#
+if(alte==7){sample=muesclay(n,p,kk)}#
+if(alte==8){sample=muesgumbel(n,p,kk)}#
+#
+ results[i, 1] <- unif_test(sample, type="Rayleigh",p_value="MC")$p.value < 0.05#
+ results[i, 2] <-  unif_test(sample, type="Bingham",p_value="MC")$p.value < 0.05#
+ results[i, 3] <-  unif_test(sample, type="Sobolev",p_value="MC")$p.value < 0.05#
+ results[i, 4] <-  unif_test(sample, type="Gine_Fn",p_value="MC")$p.value < 0.05#
+ results[i, 5] <- HR.test(sample)$p.value < 0.05#
+ results[i,6:9] <- MUCS(sample,type='US',full=TRUE,repet=100)<c(.05,.05,.05,.05)#
+}#
+#
+# Estimar potencia#
+#
+return(100*colMeans(results))#
+#
+}
+n <- 50#
+p <- 3#
+n_sim=20#
+#
+powUS=matrix(NA,1,11)#
+#
+#load(file='powUS')#
+#
+pa=matrix(NA,8,3)#
+pa[1,]=c(0,1,.25)#
+pa[2,]=c(0,3,.5)#
+pa[3,]=c(0,3,.5)#
+pa[4,]=c(0,5,1)#
+pa[5,]=c(0,.4,.1)#
+pa[6,]=c(2,5,1)#
+pa[7,]=c(.25,2,.25)#
+pa[8,]=c(1,5,1)#
+for(alte in 1:8){#
+for(kk in c(seq(pa[alte,1],pa[alte,2],pa[alte,3]))){print(c(alte,kk))#
+	powUS=rbind(powUS,c(alte,kk,calpowUS(n,p,alte,kk,n_sim)))#
+}#
+save(file=paste('powUS_n=',as.character(n),'_p=',as.character(p),sep=''),powUS)}
+powUS
+n <- 50#
+p <- 3#
+n_sim=20#
+#
+powUS=matrix(NA,1,11)#
+#
+#load(file='powUS')#
+#
+pa=matrix(NA,8,3)#
+pa[1,]=c(0,1.5,.25)#
+pa[2,]=c(0,3,.5)#
+pa[3,]=c(0,4,.5)#
+pa[4,]=c(.5,4,.5)#
+pa[5,]=c(0,5,1)#
+pa[6,]=c(2,6,1)#
+pa[7,]=c(.25,2,.25)#
+pa[8,]=c(1,3,.5)#
+for(alte in 5:5){#
+for(kk in c(seq(pa[alte,1],pa[alte,2],pa[alte,3]))){print(c(alte,kk))#
+	powUS=rbind(powUS,c(alte,kk,calpowUS(n,p,alte,kk,n_sim)))#
+}#
+save(file=paste('powUS_n=',as.character(n),'_p=',as.character(p),sep=''),powUS)}
+powUS
+n <- 70#
+p <- 4#
+n_sim=20#
+#
+powUS=matrix(NA,1,11)#
+#
+#load(file='powUS')#
+#
+pa=matrix(NA,8,3)#
+pa[1,]=c(0,1.5,.25)#
+pa[2,]=c(0,3,.5)#
+pa[3,]=c(0,4,.5)#
+pa[4,]=c(.5,4,.5)#
+pa[5,]=c(0,4,1)#
+pa[6,]=c(2,6,1)#
+pa[7,]=c(.25,2,.25)#
+pa[8,]=c(1,3,.5)#
+for(alte in 1:8){#
+for(kk in c(seq(pa[alte,1],pa[alte,2],pa[alte,3]))){print(c(alte,kk))#
+	powUS=rbind(powUS,c(alte,kk,calpowUS(n,p,alte,kk,n_sim)))#
+}#
+save(file=paste('powUS_n=',as.character(n),'_p=',as.character(p),sep=''),powUS)}
+powUS
+dev.new(width=10, height=6)#
+fechas=c(22,24,26,28,29,30)-17#
+fechas=c(fechas,c(2,4,5,7,9,11,13,15,18,20,23,26,30)+13)#
+fechas=c(fechas,c(2,5,9,12,16,20,25,29)+44)#
+fechas=c(fechas,c(4,9,14,18,20,24,28)+74)#
+fechas=c(fechas,c(1,5,10,20,22,26,30)+105)#
+fechas=c(fechas,c(5,10,15,20,28)+136)#
+fechas=c(fechas,c(5,7,17,24,25,31)+164)#
+fechas=c(fechas,c(6,15,20,28)+195)#
+fechas=c(fechas,c(7,11,15,20,25,31)+225)#
+fechas=c(fechas,c(6,10,15,21,27)+256)#
+fechas=c(fechas,c(4,8,14,17,21,25,31)+286)#
+fechas=c(fechas,c(4,9,13,19,21,25)+317)#
+fechas=c(fechas,c(11,15,22,27)+348)#
+fechas=c(fechas,c(1,9,21,30)+378)#
+fechas=c(fechas,c(10,20,30)+409)#
+fechas=c(fechas,c(5,10,15,20,25,30)+439)#
+fechas=c(fechas,c(5,10,20,25,30)+470)#
+fechas=c(fechas,c(5,10,15,20,25)+501)#
+fechas=c(fechas,c(1,6,13,20,25,31)+529)#
+fechas=c(fechas,c(9,17,24)+560)#
+fechas=c(fechas,c(3,10,20,25,31)+590)#
+fechas=c(fechas,c(5,10,15,20,25,30)+621)#
+fechas=c(fechas,c(5,11,18,25,30)+651)#
+fechas=c(fechas,c(5,10,15,20,30)+651+31)#
+fechas=c(fechas,c(7,15,23)+651+31+31)#
+fechas=c(fechas,c(3,10,20,28)+651+31+31+30)#
+fechas=c(fechas,c(5,15,25)+774)#
+fechas=c(fechas,c(5,16,26)+804)#
+fechas=c(fechas,c(7,15,25)+835)#
+fechas=c(fechas,c(5,15,25)+866)#
+fechas=c(fechas,c(5,20,26)+895)#
+fechas=c(fechas,c(5,15,21,26)+926)#
+fechas=c(fechas,c(5,11,20,30)+956)#
+fechas=c(fechas,c(10,15,26)+987)#
+fechas=c(fechas,c(5,15,24)+1017)#
+fechas=c(fechas,c(2,9,22,31)+1048)#
+fechas=c(fechas,c(5,10,15,20,25)+1079)#
+fechas=c(fechas,c(5,15,23)+1109)#
+fechas=c(fechas,c(1,16,21,26)+1140)#
+fechas=c(fechas,c(1,6,14,20)+1170)#
+fechas=c(fechas,c(8,14)+1201)#
+fechas=c(fechas,c(4,8,17,24)+1232)#
+fechas=c(fechas,c(10,23)+1260)#
+fechas=c(fechas,c(14)+1291)#
+fechas=c(fechas,c(18,24,30)+1321)#
+fechas=c(fechas,c(7,19,24,27,30)+1352)#
+fechas=c(fechas,c(5,11,15,16,21,26)+1382)#
+fechas=c(fechas,c(3,4,8)+1413)#
+fechas=c(fechas,c(5,9,15)+1444)#
+fechas=c(fechas,c(7,27)+1474)#
+fechas=c(fechas,c(14,23)+1505)#
+fechas=c(fechas,c(12,23)+1535)#
+fechas=c(fechas,c(9,17,25)+1566)#
+fechas=c(fechas,c(9,25)+1597)#
+fechas=c(fechas,c(15,31)+1625)#
+fechas=c(fechas,c(19)+1656)#
+fechas=c(fechas,c(2,6,15,23,30)+1686)#
+fechas=c(fechas,c(3,13,22,30)+1717)#
+fechas=c(fechas,c(8,16,20,28)+1747)#
+fechas=c(fechas,c(8,15,25)+1778)#
+fechas=c(fechas,c(3,18,28)+1809)#
+fechas=c(fechas,c(7,17,27)+1839)#
+fechas=c(fechas,c(8,14)+1870)#
+fechas=c(fechas,c(1,18,27)+1900)#
+fechas=c(fechas,c(7,18)+1931)#
+fechas=c(fechas,c(10)+1962)#
+fechas=c(fechas,c(11)+1990)#
+fechas=c(fechas,c(4,23)+2021)#
+fechas=c(fechas,c(2,11,21)+2051)#
+fechas=c(fechas,c(9,17,25)+2082)#
+fechas=c(fechas,c(24,31)+2112)#
+fechas=c(fechas,c(14,19,31)+2143)#
+fechas=c(fechas,c(5,16,23)+2174)#
+fechas=c(fechas,c(6,15)+2200)#
+fechas=c(fechas,c(6,13,17,27)+2231)#
+fechas=c(fechas,c(6,19,26)+2261)#
+fechas=c(fechas,c(6,18,22,26)+2292)#
+fechas=c(fechas,c(2,9,20,28)+2323)#
+fechas=c(fechas,c(7,21)+2352)#
+fechas=c(fechas,c(3,25)+2383)#
+fechas=c(fechas,c(15)+2413)#
+fechas=c(fechas,c(5)+2444)#
+fechas=c(fechas,c(10,16,28)+2474)#
+fechas=c(fechas,c(9,25)+2505)#
+fechas=c(fechas,c(5,13,26)+2536)#
+fechas=c(fechas,c(4,11,18)+2566)#
+fechas=c(fechas,c(1,9,22,29)+2597)#
+fechas=c(fechas,c(13,27)+2627)#
+fechas=c(fechas,c(7,10,22,24)+2658)#
+fechas=c(fechas,c(1,7,15,21)+2689)#
+fechas=c(fechas,c(7,14,21,28)+2717)#
+fechas=c(fechas,c(5,11,18,25)+2748)#
+fechas=c(fechas,c(2,10,16,24,31)+2778)#
+fechas=c(fechas,c(6,13,20,27)+2809)#
+fechas=c(fechas,c(4,11,19,25)+2839)#
+fechas=c(fechas,c(1,8,15,22,30)+2870)#
+fechas=c(fechas,c(5,13,19,27)+2901)#
+fechas=c(fechas,c(4,10,17,25)+2931)#
+fechas=c(fechas,c(1,7,14,21,28)+2962)#
+fechas=c(fechas,c(5,12,19,26)+2992)#
+fechas=c(fechas,c(2,9,16,23,31)+3023)#
+fechas=c(fechas,c(6,13,20,27)+3054)#
+fechas=c(fechas,c(7,13,20,27)+3082)#
+fechas=c(fechas,c(4,10,17)+3113)#
+fechas=c(fechas,c(1,8,15,22,29)+3143)#
+fechas=c(fechas,c(5,13,19,26)+3171)#
+fechas=c(fechas,c(4,10,24,27,31)+3201)#
+fechas=c(fechas,c(6,14,22)+3232)#
+fechas=c(fechas,c(4,11,18,25)+3263)#
+fechas=c(fechas,c(2,9,16,23,30)+3293)#
+fechas=c(fechas,c(6,13,20,27)+3324)#
+fechas=c(fechas,c(4,12,19,21,25)+3354)#
+fechas=c(fechas,c(2,8,15,22,29)+3385)#
+fechas=c(fechas,c(5,12,19,26)+3416)#
+fechas=c(fechas,c(5,12,19,26)+3444)#
+fechas=c(fechas,c(2,3,9,16,23,30)+3475)#
+fechas=c(fechas,c(7,14,21,28)+3505)#
+fechas=c(fechas,c(4,11,18,25)+3536)#
+fechas=c(fechas,c(2,9,16,23,30)+3566)#
+fechas=c(fechas,c(6,13,20,27)+3597)#
+fechas=c(fechas,c(1,10,17,24)+3628)#
+fechas=c(fechas,c(1,8,15,22,29)+3658)#
+fechas=c(fechas,c(5,12,19,25)+3689)#
+fechas=c(fechas,c(3,10,17,24,31)+3719)#
+fechas=c(fechas,c(7,14,21,28)+3750)#
+fechas=c(fechas,c(4,11,18,25)+3781)#
+fechas=c(fechas,c(3,10,17,20,24,31)+3810)#
+fechas=c(fechas,c(7,14,21,28)+3841)#
+fechas=c(fechas,c(3,6,12,20,26)+3871)#
+fechas=c(fechas,c(2,9,16,23,30)+3902)#
+fechas=c(fechas,c(7,14,21,28)+3932)#
+fechas=c(fechas,c(4,11,18,25,26)+3963)#
+fechas=c(fechas,c(1,8,15,22,29)+3994)#
+fechas=c(fechas,c(6,13,20,27)+4024)#
+fechas=c(fechas,c(3,10,17,24)+4055)#
+fechas=c(fechas,c(1,8,15,22,29)+4085)#
+fechas=c(fechas,c(5,12,19,26,27)+4116)#
+fechas=c(fechas,c(2,9,16,23)+4147)#
+fechas=c(fechas,c(2,5,9,16,23,30)+4175)#
+fechas=c(fechas,c(6,9,13,20,27)+4206)#
+fechas=c(fechas,c(4,11,18,25)+4236)#
+fechas=c(fechas,c(1,4,8,15,22,29)+4267)#
+fechas=c(fechas,c(2,6,13,20,27)+4297)#
+fechas=c(fechas,c(3,10,13,17,24,31)+4328)#
+fechas=c(fechas,c(7,14,21,28)+4359)#
+fechas=c(fechas,c(5,12,19,26)+4389)#
+fechas=c(fechas,c(2,9,16,23,30)+4420)#
+fechas=c(fechas,c(7,14,21,28)+4450)#
+fechas=c(fechas,c(4,5,11)+4481)#
+#
+fechasaux=c(11.5,11.7,12,13,14,15)+3263#
+lecturasaux=c(76,157,97,102,109,109)#
+#
+fechaspeso=c(22,23,24,26,27,28,29,30)+3263#
+fechaspeso=c(fechaspeso,c(1,2,7,9,23,28)+3293)#
+fechaspeso=c(fechaspeso,c(13,20,27)+3324)#
+fechaspeso=c(fechaspeso,c(12,21,25)+3354)#
+fechaspeso=c(fechaspeso,c(15,22,29)+3385)#
+fechaspeso=c(fechaspeso,c(12,19,26)+3416)#
+fechaspeso=c(fechaspeso,c(16,26)+3444)#
+fechaspeso=c(fechaspeso,c(2,9,23,30)+3475)#
+fechaspeso=c(fechaspeso,c(10,27)+3505)#
+fechaspeso=c(fechaspeso,c(2)+3536)#
+fechaspeso=c(fechaspeso,c(30)+3566)#
+fechaspeso=c(fechaspeso,c(6,16,19)+3597)#
+fechaspeso=c(fechaspeso,c(2,22)+3628)#
+fechaspeso=c(fechaspeso,c(1,21,28)+3658)#
+fechaspeso=c(fechaspeso,c(24)+3689)#
+fechaspeso=c(fechaspeso,c(17,30)+3719)#
+fechaspeso=c(fechaspeso,c(6,21,29)+3750)#
+fechaspeso=c(fechaspeso,c(1,18)+3781)#
+fechaspeso=c(fechaspeso,c(2,17,31)+3810)#
+fechaspeso=c(fechaspeso,c(14)+3841)#
+fechaspeso=c(fechaspeso,c(2,20)+3871)#
+fechaspeso=c(fechaspeso,c(9,16)+3902)#
+fechaspeso=c(fechaspeso,c(26)+3932)#
+fechaspeso=c(fechaspeso,c(1,15,29)+3994)#
+fechaspeso=c(fechaspeso,c(6,11,13,27)+4024)#
+fechaspeso=c(fechaspeso,c(3,10,24)+4055)#
+fechaspeso=c(fechaspeso,c(1,8,29)+4085)#
+fechaspeso=c(fechaspeso,c(19,27)+4116)#
+fechaspeso=c(fechaspeso,c(2,18,23)+4147)#
+fechaspeso=c(fechaspeso,c(23)+4175)#
+fechaspeso=c(fechaspeso,c(2,13)+4206)#
+fechaspeso=c(fechaspeso,c(18,26)+4236)#
+fechaspeso=c(fechaspeso,c(3,13,17)+4328)#
+fechaspeso=c(fechaspeso,c(5,8,11,12,26)+4359)#
+fechaspeso=c(fechaspeso,c(12,22,26)+4389)#
+fechaspeso=c(fechaspeso,c(9,21,30)+4420)#
+fechaspeso=c(fechaspeso,c(10,31)+4450)#
+fechaspeso=c(fechaspeso,c(3,7,10)+4481)#
+#
+lecturaspeso=c(80.1,79.1,78.8,79.2,78.7,79.1,79.1,78.6,79,79,78.6,79.1,79.8,78.4,79.3,77.6,78.4,78.7,78.3,78.5,79.4,79.4,78.8,79,80.1,80,79.3,81.3,79.7,80.2,80.1,81.1,81.1,81.8,81.8,78.1,80,78.8,78.4,78.4,79.8,79.9,80.5,80.8,81.1,81.9,81.3,81.9,80.9,82.6,82.1,80.6,79.8,82,81.3,81.3,80.4,79.8,81.5,81.5,81.7,81.9,82.5,82.2,82.9,81.5,81.9,81.6,82.7,83.7,83,82.6,82.6,82.9,81.8,82.3,81,80.4,80.4,81,81,81.7,80.4,80.1,82.6,82.6,82.6,83.2,82.8,82.3,81.8,82.1,82.2,81.8,81.8,82.2,81,80.7,81.3,80.6,80.6,79.2,80)#
+indice=lecturaspeso/1.68^2#
+lecturas=c(221,161,172,262,143,151,173,80,110,107,99,81,97,124,60,166,108,67,96,92,107,94,125,87,96,97,102,112,102,98,151,86,97,89,103,97,94,133,95,96,93,104,89,105,95,101,100,81,171,119,103,113,111,127,96,117,132,85,91,101,115,106,136,108,116,126,66,80,82,82,90,101,88,90,92,91,73,170,115,95,163,154,126,109,120,102,132,92,102,121,134,127,108)#
+lecturas=c(lecturas,c(116,111,116,111,101,86,122,104,136,141,95,91,98,142,111,104,107,110,113,125,131,105,105,118,107,164,88,128,102,118,100,137,116,102,102,91,110,95,87,106,89,121,125,104,117,92,107,122,95,126,108,112,86))#
+lecturas=c(lecturas,c(111,107,104,90,125,101,89,106,108,101,98,132,98,112,132,177,108,141,110,122,92,150,113,99))#
+lecturas=c(lecturas,c(110,116,110,108,118,113,150,131,136,148,126,101,122,126,117,105,135,141,115,144,104,87,93,104,111,108,116,135,116))#
+lecturas=c(lecturas,c(107,99,107,148,150,122,120,147,121,67,150,127,175,157,139,119,123,102,165,97,160,127,142))#
+lecturas=c(lecturas,c(128,136,139,142,112,125,89,81,117,102,97,144,110,126,168,126,121,157,119,176,142,102,172))#
+lecturas=c(lecturas,c(113,142,151,106,103,127,143,152,105,109,144,105,128,157,125,141,142,137,114,125,145,128))#
+lecturas=c(lecturas,c(144,155,157,140,137,143,93,120,156,94,149,109,155,131,121,137,142,121,165,115,129,143,131))#
+lecturas=c(lecturas,c(90,117,116,147,129,131,117,110,111,114,113,125,97,136,140,131,156,139,134,134,131,147,125,140,137,161,131,120,150,142,119,129,127))#
+lecturas=c(lecturas,c(149,137,111,107,149,132,128,123,126,117,109,112,119,137,155,104,113,137,133,166,157,158,170,173,126,140,147,176,142,168,116,122,161,123,123,129,142,128,167,175,151,147,147,143,115,123,130,116,115,123,133,142,118,123,136,117,131,133,119,125,107,139,163,161,162,155,121,117,142,122,154,151,158,154,159,164,131,167,102,176,128,130,128))#
+lecturas=c(lecturas,c(128,130,105,122,126,171,150,126,109,122,140,131,136))#
+lecturas=c(lecturas,c(126,128,169,83,96,101,129,108,112,99,101,107,130,93,114,98,94,135,124,162,104,93,110,111,96))#
+lecturas=c(lecturas,c(153,136,126,136,87,119,136,86,89,89,80,104,110,106,108,115,86,113,131,151,118,128))#
+lecturas=c(lecturas,c(109,122,120,128,146,147,135,155,132,102,154,101,126,143,105,108,118,114,116,106,100,111,121,160,149,131,118,101,80,131,107,112,118))#
+lecturas=c(lecturas,c(136,122,102,123,131,91,113,123,87,120,129,104,106,143,147))#
+lecturas=c(lecturas,c(163,134,132,118,81,134,159,109,121,101,137,127,129,155,150,99,114,129,118,108))#
+lecturas=c(lecturas,120,113,119,186,144,111,98,105,154,160,130,104,97,161,124,148)#
+lecturas=c(lecturas,137,133,127,112,125,129,120,101,163,137,151,171,128,151,153,100)#
+lecturas=c(lecturas,145,147,137,179,158,131,105,149,139,129,123,166,123,141,132,130,152)#
+lecturas=c(lecturas,162,157,178,100,147,144,129,129,127,177,144,136)#
+xmin=-8#
+xmin=4000#
+plot(fechas,lecturas,ylab='glucemia (mg/lt)',ylim=c(50,500),xlab="días desde el comienzo de la medicación",xlim=c(xmin,max(fechas,fechasaux,fechaspeso)),pch=15,cex=.6)#
+#
+lines(c(-8,15,53,78,171,338,581,1190,1281,1756,3278,3598,4367),c(442,174,120,123,115,86,110,125,134,146,124,156,165),type='p',col='red')#
+#
+lines(fechas,lecturas)#
+#
+#lines(fechasaux,lecturasaux,type='p',pch=1)#
+#
+lines(c(14,44),c(480,480),col='gray')#
+lines(c(75,104),c(480,480),col='gray')#
+lines(c(137,165),c(480,480),col='gray')#
+lines(c(196,226),c(480,480),col='gray')#
+lines(c(257,287),c(480,480),col='gray')#
+lines(c(317,348),c(480,480),col='gray')#
+lines(c(378,409),c(480,480),col='gray')#
+lines(c(439,470),c(480,480),col='gray')#
+lines(c(501,528),c(480,480),col='gray')#
+lines(c(560,590),c(480,480),col='gray')#
+lines(c(621,651),c(480,480),col='gray')#
+lines(c(682,713),c(480,480),col='gray')#
+lines(c(743,774),c(480,480),col='gray')#
+lines(c(804,835),c(480,480),col='gray')#
+lines(c(866,894),c(480,480),col='gray')#
+lines(c(925,955),c(480,480),col='gray')#
+lines(c(986,1016),c(480,480),col='gray')#
+for(h in 1:10){hh=h*365#
+	if(4*floor(h/4)==h)hh=hh+1#
+lines(c(682,713)+hh,c(480,480),col='gray')#
+lines(c(743,774)+hh,c(480,480),col='gray')#
+lines(c(804,835)+hh,c(480,480),col='gray')#
+lines(c(866,894)+hh,c(480,480),col='gray')#
+lines(c(925,955)+hh,c(480,480),col='gray')#
+lines(c(986,1016)+hh,c(480,480),col='gray')#
+}#
+#
+text(28,500,labels='oct',cex=.6)#
+text(58,500,labels='nov',cex=.6)#
+text(92,500,labels='dic',cex=.6)#
+mes=c("ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic")#
+me=c(119,150,179,209,239,270,300,331,361,391,421,451)#
+for(a in 0:12){#
+	for(b in 1:12){#
+		ain=a*365+floor(a/4)+me[b]#
+		text(ain,500,labels=mes[b],cex=.6)#
+		}}#
+#
+text(85,456,labels='2013',cex=.5)#
+text(122,456,labels='2014',cex=.5)#
+lines(c(104,104),c(450,475),col='gray')#
+text(450,456,labels='2014',cex=.5)#
+text(487,456,labels='2015',cex=.5)#
+lines(c(469,469),c(450,475),col='gray')#
+text(815,456,labels='2015',cex=.5)#
+text(852,456,labels='2016',cex=.5)#
+lines(c(834,834),c(450,475),col='gray')#
+text(815+365,456,labels='2016',cex=.5)#
+text(852+365,456,labels='2017',cex=.5)#
+lines(c(834+365,834+365),c(450,475),col='gray')#
+text(815+365+365,456,labels='2017',cex=.5)#
+text(852+365+365,456,labels='2018',cex=.5)#
+lines(c(834+365+365,834+365+365),c(450,475),col='gray')#
+text(815+365+365+365,456,labels='2018',cex=.5)#
+text(852+365+365+365,456,labels='2019',cex=.5)#
+lines(c(834+365+365+365,834+365+365+365),c(450,475),col='gray')#
+text(815+365+365+365+365,456,labels='2019',cex=.5)#
+text(852+365+365+365+365,456,labels='2020',cex=.5)#
+lines(c(834+365+365+365+365,834+365+365+365+365),c(450,475),col='gray')#
+text(815+365+365+365+365+366,456,labels='2020',cex=.5)#
+text(852+365+365+365+365+366,456,labels='2021',cex=.5)#
+lines(c(834+365+365+365+365+366,834+365+365+365+365+366),c(450,475),col='gray')#
+text(815+365+365+365+365+366+365,456,labels='2021',cex=.5)#
+text(852+365+365+365+365+366+365,456,labels='2022',cex=.5)#
+lines(c(834+365+365+365+365+366+365,834+365+365+365+365+366+365),c(450,475),col='gray')#
+text(815+365+365+365+365+366+365+365,456,labels='2022',cex=.5)#
+text(852+365+365+365+365+366+365+365,456,labels='2023',cex=.5)#
+lines(c(834+365+365+365+365+366+365+365,834+365+365+365+365+366+365+365),c(450,475),col='gray')#
+text(815+7*365+366,456,labels='2023',cex=.5)#
+text(852+7*365+366,456,labels='2024',cex=.5)#
+lines(c(834+7*365+366,834+7*365+366),c(450,475),col='gray')#
+text(815+7*365+2*366,456,labels='2024',cex=.5)#
+text(852+7*365+2*366,456,labels='2025',cex=.5)#
+lines(c(834+7*365+2*366,834+7*365+2*366),c(450,475),col='gray')#
+text(815+8*365+2*366,456,labels='2025',cex=.5)#
+text(852+8*365+2*366,456,labels='2026',cex=.5)#
+lines(c(834+8*365+2*366,834+8*365+2*366),c(450,475),col='gray')#
+abline(h=c(70,100),col='green',lwd=2)#
+abline(h=c(60,120),col='green',lty=3,lwd=3)#
+abline(v=0)#
+abline(h=442,lty=3)#
+lines(fechas,lecturas,type='p',pch=15,cex=.6)#
+ff=fechas[length(fechas)]#
+fff=ff-xmin#
+cin=5*(ff+8)/34#
+die=10*(ff+8)/34#
+text(xmin+fff*.86,400,label='con extracción de sangre')#
+text(xmin+fff*.86,370,label='NIPRO "TRUE result"     ')#
+lines(xmin+fff*.72,400,type='p',col='red')#
+lines(xmin+fff*.72,370,type='p',pch=15,cex=.6)#
+#
+lines(c(xmin+fff*.70,xmin+fff,xmin+fff,xmin+fff*.70,xmin+fff*.70),c(350,350,420,420,350))#
+#
+lines(c(3356,3356),c(40,60))#
+text(3330,50,label='Diaformina 500',cex=.5)#
+text(3380,50,label='Diaformina XR 500',cex=.5)#
+#
+par(new=TRUE)#
+#
+plot(fechaspeso,lecturaspeso,xlim=c(xmin,max(fechas,fechasaux,fechaspeso)),ylim=c(55,100),pch=4,axes=FALSE,col='blue',ylab='',xlab='')#
+axis(side = 4, at = c(70,75,80,85,90),ylab='',xlab='')     #
+mtext("y2", side = 4, line = 3)#
+pes1=1.67^2*25#
+pes2=1.67^2*30#
+xpes=3280#
+xpes=xmin#
+lines(c(xpes,4500),c(pes1,pes1),col='lightblue',lwd=3)#
+lines(c(xpes,4500),c(pes2,pes2),col='lightblue',lwd=3)#
+#
+#lines(c(xpes,xmin+fff*.70-1),c(pes2,pes2),col='lightblue',lwd=3)#
+#lines(c(xmin+fff+1,4000),c(pes2,pes2),col='lightblue',lwd=3)#
+#
+text(max(xpes,xmin),pes1-1,labels="peso normal", col='lightblue',pos=4)#
+text(max(xpes,xmin),pes2+1,labels="obesidad", col='lightblue',pos=4)#
+save(fechas,file='fechasdiab')#
+save(lecturas,file='lecturasdiab')
+dev.new(width=10, height=6)#
+fechas=c(22,24,26,28,29,30)-17#
+fechas=c(fechas,c(2,4,5,7,9,11,13,15,18,20,23,26,30)+13)#
+fechas=c(fechas,c(2,5,9,12,16,20,25,29)+44)#
+fechas=c(fechas,c(4,9,14,18,20,24,28)+74)#
+fechas=c(fechas,c(1,5,10,20,22,26,30)+105)#
+fechas=c(fechas,c(5,10,15,20,28)+136)#
+fechas=c(fechas,c(5,7,17,24,25,31)+164)#
+fechas=c(fechas,c(6,15,20,28)+195)#
+fechas=c(fechas,c(7,11,15,20,25,31)+225)#
+fechas=c(fechas,c(6,10,15,21,27)+256)#
+fechas=c(fechas,c(4,8,14,17,21,25,31)+286)#
+fechas=c(fechas,c(4,9,13,19,21,25)+317)#
+fechas=c(fechas,c(11,15,22,27)+348)#
+fechas=c(fechas,c(1,9,21,30)+378)#
+fechas=c(fechas,c(10,20,30)+409)#
+fechas=c(fechas,c(5,10,15,20,25,30)+439)#
+fechas=c(fechas,c(5,10,20,25,30)+470)#
+fechas=c(fechas,c(5,10,15,20,25)+501)#
+fechas=c(fechas,c(1,6,13,20,25,31)+529)#
+fechas=c(fechas,c(9,17,24)+560)#
+fechas=c(fechas,c(3,10,20,25,31)+590)#
+fechas=c(fechas,c(5,10,15,20,25,30)+621)#
+fechas=c(fechas,c(5,11,18,25,30)+651)#
+fechas=c(fechas,c(5,10,15,20,30)+651+31)#
+fechas=c(fechas,c(7,15,23)+651+31+31)#
+fechas=c(fechas,c(3,10,20,28)+651+31+31+30)#
+fechas=c(fechas,c(5,15,25)+774)#
+fechas=c(fechas,c(5,16,26)+804)#
+fechas=c(fechas,c(7,15,25)+835)#
+fechas=c(fechas,c(5,15,25)+866)#
+fechas=c(fechas,c(5,20,26)+895)#
+fechas=c(fechas,c(5,15,21,26)+926)#
+fechas=c(fechas,c(5,11,20,30)+956)#
+fechas=c(fechas,c(10,15,26)+987)#
+fechas=c(fechas,c(5,15,24)+1017)#
+fechas=c(fechas,c(2,9,22,31)+1048)#
+fechas=c(fechas,c(5,10,15,20,25)+1079)#
+fechas=c(fechas,c(5,15,23)+1109)#
+fechas=c(fechas,c(1,16,21,26)+1140)#
+fechas=c(fechas,c(1,6,14,20)+1170)#
+fechas=c(fechas,c(8,14)+1201)#
+fechas=c(fechas,c(4,8,17,24)+1232)#
+fechas=c(fechas,c(10,23)+1260)#
+fechas=c(fechas,c(14)+1291)#
+fechas=c(fechas,c(18,24,30)+1321)#
+fechas=c(fechas,c(7,19,24,27,30)+1352)#
+fechas=c(fechas,c(5,11,15,16,21,26)+1382)#
+fechas=c(fechas,c(3,4,8)+1413)#
+fechas=c(fechas,c(5,9,15)+1444)#
+fechas=c(fechas,c(7,27)+1474)#
+fechas=c(fechas,c(14,23)+1505)#
+fechas=c(fechas,c(12,23)+1535)#
+fechas=c(fechas,c(9,17,25)+1566)#
+fechas=c(fechas,c(9,25)+1597)#
+fechas=c(fechas,c(15,31)+1625)#
+fechas=c(fechas,c(19)+1656)#
+fechas=c(fechas,c(2,6,15,23,30)+1686)#
+fechas=c(fechas,c(3,13,22,30)+1717)#
+fechas=c(fechas,c(8,16,20,28)+1747)#
+fechas=c(fechas,c(8,15,25)+1778)#
+fechas=c(fechas,c(3,18,28)+1809)#
+fechas=c(fechas,c(7,17,27)+1839)#
+fechas=c(fechas,c(8,14)+1870)#
+fechas=c(fechas,c(1,18,27)+1900)#
+fechas=c(fechas,c(7,18)+1931)#
+fechas=c(fechas,c(10)+1962)#
+fechas=c(fechas,c(11)+1990)#
+fechas=c(fechas,c(4,23)+2021)#
+fechas=c(fechas,c(2,11,21)+2051)#
+fechas=c(fechas,c(9,17,25)+2082)#
+fechas=c(fechas,c(24,31)+2112)#
+fechas=c(fechas,c(14,19,31)+2143)#
+fechas=c(fechas,c(5,16,23)+2174)#
+fechas=c(fechas,c(6,15)+2200)#
+fechas=c(fechas,c(6,13,17,27)+2231)#
+fechas=c(fechas,c(6,19,26)+2261)#
+fechas=c(fechas,c(6,18,22,26)+2292)#
+fechas=c(fechas,c(2,9,20,28)+2323)#
+fechas=c(fechas,c(7,21)+2352)#
+fechas=c(fechas,c(3,25)+2383)#
+fechas=c(fechas,c(15)+2413)#
+fechas=c(fechas,c(5)+2444)#
+fechas=c(fechas,c(10,16,28)+2474)#
+fechas=c(fechas,c(9,25)+2505)#
+fechas=c(fechas,c(5,13,26)+2536)#
+fechas=c(fechas,c(4,11,18)+2566)#
+fechas=c(fechas,c(1,9,22,29)+2597)#
+fechas=c(fechas,c(13,27)+2627)#
+fechas=c(fechas,c(7,10,22,24)+2658)#
+fechas=c(fechas,c(1,7,15,21)+2689)#
+fechas=c(fechas,c(7,14,21,28)+2717)#
+fechas=c(fechas,c(5,11,18,25)+2748)#
+fechas=c(fechas,c(2,10,16,24,31)+2778)#
+fechas=c(fechas,c(6,13,20,27)+2809)#
+fechas=c(fechas,c(4,11,19,25)+2839)#
+fechas=c(fechas,c(1,8,15,22,30)+2870)#
+fechas=c(fechas,c(5,13,19,27)+2901)#
+fechas=c(fechas,c(4,10,17,25)+2931)#
+fechas=c(fechas,c(1,7,14,21,28)+2962)#
+fechas=c(fechas,c(5,12,19,26)+2992)#
+fechas=c(fechas,c(2,9,16,23,31)+3023)#
+fechas=c(fechas,c(6,13,20,27)+3054)#
+fechas=c(fechas,c(7,13,20,27)+3082)#
+fechas=c(fechas,c(4,10,17)+3113)#
+fechas=c(fechas,c(1,8,15,22,29)+3143)#
+fechas=c(fechas,c(5,13,19,26)+3171)#
+fechas=c(fechas,c(4,10,24,27,31)+3201)#
+fechas=c(fechas,c(6,14,22)+3232)#
+fechas=c(fechas,c(4,11,18,25)+3263)#
+fechas=c(fechas,c(2,9,16,23,30)+3293)#
+fechas=c(fechas,c(6,13,20,27)+3324)#
+fechas=c(fechas,c(4,12,19,21,25)+3354)#
+fechas=c(fechas,c(2,8,15,22,29)+3385)#
+fechas=c(fechas,c(5,12,19,26)+3416)#
+fechas=c(fechas,c(5,12,19,26)+3444)#
+fechas=c(fechas,c(2,3,9,16,23,30)+3475)#
+fechas=c(fechas,c(7,14,21,28)+3505)#
+fechas=c(fechas,c(4,11,18,25)+3536)#
+fechas=c(fechas,c(2,9,16,23,30)+3566)#
+fechas=c(fechas,c(6,13,20,27)+3597)#
+fechas=c(fechas,c(1,10,17,24)+3628)#
+fechas=c(fechas,c(1,8,15,22,29)+3658)#
+fechas=c(fechas,c(5,12,19,25)+3689)#
+fechas=c(fechas,c(3,10,17,24,31)+3719)#
+fechas=c(fechas,c(7,14,21,28)+3750)#
+fechas=c(fechas,c(4,11,18,25)+3781)#
+fechas=c(fechas,c(3,10,17,20,24,31)+3810)#
+fechas=c(fechas,c(7,14,21,28)+3841)#
+fechas=c(fechas,c(3,6,12,20,26)+3871)#
+fechas=c(fechas,c(2,9,16,23,30)+3902)#
+fechas=c(fechas,c(7,14,21,28)+3932)#
+fechas=c(fechas,c(4,11,18,25,26)+3963)#
+fechas=c(fechas,c(1,8,15,22,29)+3994)#
+fechas=c(fechas,c(6,13,20,27)+4024)#
+fechas=c(fechas,c(3,10,17,24)+4055)#
+fechas=c(fechas,c(1,8,15,22,29)+4085)#
+fechas=c(fechas,c(5,12,19,26,27)+4116)#
+fechas=c(fechas,c(2,9,16,23)+4147)#
+fechas=c(fechas,c(2,5,9,16,23,30)+4175)#
+fechas=c(fechas,c(6,9,13,20,27)+4206)#
+fechas=c(fechas,c(4,11,18,25)+4236)#
+fechas=c(fechas,c(1,4,8,15,22,29)+4267)#
+fechas=c(fechas,c(2,6,13,20,27)+4297)#
+fechas=c(fechas,c(3,10,13,17,24,31)+4328)#
+fechas=c(fechas,c(7,14,21,28)+4359)#
+fechas=c(fechas,c(5,12,19,26)+4389)#
+fechas=c(fechas,c(2,9,16,23,30)+4420)#
+fechas=c(fechas,c(7,14,21,28)+4450)#
+fechas=c(fechas,c(4,5,11)+4481)#
+#
+fechasaux=c(11.5,11.7,12,13,14,15)+3263#
+lecturasaux=c(76,157,97,102,109,109)#
+#
+fechaspeso=c(22,23,24,26,27,28,29,30)+3263#
+fechaspeso=c(fechaspeso,c(1,2,7,9,23,28)+3293)#
+fechaspeso=c(fechaspeso,c(13,20,27)+3324)#
+fechaspeso=c(fechaspeso,c(12,21,25)+3354)#
+fechaspeso=c(fechaspeso,c(15,22,29)+3385)#
+fechaspeso=c(fechaspeso,c(12,19,26)+3416)#
+fechaspeso=c(fechaspeso,c(16,26)+3444)#
+fechaspeso=c(fechaspeso,c(2,9,23,30)+3475)#
+fechaspeso=c(fechaspeso,c(10,27)+3505)#
+fechaspeso=c(fechaspeso,c(2)+3536)#
+fechaspeso=c(fechaspeso,c(30)+3566)#
+fechaspeso=c(fechaspeso,c(6,16,19)+3597)#
+fechaspeso=c(fechaspeso,c(2,22)+3628)#
+fechaspeso=c(fechaspeso,c(1,21,28)+3658)#
+fechaspeso=c(fechaspeso,c(24)+3689)#
+fechaspeso=c(fechaspeso,c(17,30)+3719)#
+fechaspeso=c(fechaspeso,c(6,21,29)+3750)#
+fechaspeso=c(fechaspeso,c(1,18)+3781)#
+fechaspeso=c(fechaspeso,c(2,17,31)+3810)#
+fechaspeso=c(fechaspeso,c(14)+3841)#
+fechaspeso=c(fechaspeso,c(2,20)+3871)#
+fechaspeso=c(fechaspeso,c(9,16)+3902)#
+fechaspeso=c(fechaspeso,c(26)+3932)#
+fechaspeso=c(fechaspeso,c(1,15,29)+3994)#
+fechaspeso=c(fechaspeso,c(6,11,13,27)+4024)#
+fechaspeso=c(fechaspeso,c(3,10,24)+4055)#
+fechaspeso=c(fechaspeso,c(1,8,29)+4085)#
+fechaspeso=c(fechaspeso,c(19,27)+4116)#
+fechaspeso=c(fechaspeso,c(2,18,23)+4147)#
+fechaspeso=c(fechaspeso,c(23)+4175)#
+fechaspeso=c(fechaspeso,c(2,13)+4206)#
+fechaspeso=c(fechaspeso,c(18,26)+4236)#
+fechaspeso=c(fechaspeso,c(3,13,17)+4328)#
+fechaspeso=c(fechaspeso,c(5,8,11,12,26)+4359)#
+fechaspeso=c(fechaspeso,c(12,22,26)+4389)#
+fechaspeso=c(fechaspeso,c(9,21,30)+4420)#
+fechaspeso=c(fechaspeso,c(10,31)+4450)#
+fechaspeso=c(fechaspeso,c(3,7,10)+4481)#
+#
+lecturaspeso=c(80.1,79.1,78.8,79.2,78.7,79.1,79.1,78.6,79,79,78.6,79.1,79.8,78.4,79.3,77.6,78.4,78.7,78.3,78.5,79.4,79.4,78.8,79,80.1,80,79.3,81.3,79.7,80.2,80.1,81.1,81.1,81.8,81.8,78.1,80,78.8,78.4,78.4,79.8,79.9,80.5,80.8,81.1,81.9,81.3,81.9,80.9,82.6,82.1,80.6,79.8,82,81.3,81.3,80.4,79.8,81.5,81.5,81.7,81.9,82.5,82.2,82.9,81.5,81.9,81.6,82.7,83.7,83,82.6,82.6,82.9,81.8,82.3,81,80.4,80.4,81,81,81.7,80.4,80.1,82.6,82.6,82.6,83.2,82.8,82.3,81.8,82.1,82.2,81.8,81.8,82.2,81,80.7,81.3,80.6,80.6,79.2,80)#
+indice=lecturaspeso/1.68^2#
+lecturas=c(221,161,172,262,143,151,173,80,110,107,99,81,97,124,60,166,108,67,96,92,107,94,125,87,96,97,102,112,102,98,151,86,97,89,103,97,94,133,95,96,93,104,89,105,95,101,100,81,171,119,103,113,111,127,96,117,132,85,91,101,115,106,136,108,116,126,66,80,82,82,90,101,88,90,92,91,73,170,115,95,163,154,126,109,120,102,132,92,102,121,134,127,108)#
+lecturas=c(lecturas,c(116,111,116,111,101,86,122,104,136,141,95,91,98,142,111,104,107,110,113,125,131,105,105,118,107,164,88,128,102,118,100,137,116,102,102,91,110,95,87,106,89,121,125,104,117,92,107,122,95,126,108,112,86))#
+lecturas=c(lecturas,c(111,107,104,90,125,101,89,106,108,101,98,132,98,112,132,177,108,141,110,122,92,150,113,99))#
+lecturas=c(lecturas,c(110,116,110,108,118,113,150,131,136,148,126,101,122,126,117,105,135,141,115,144,104,87,93,104,111,108,116,135,116))#
+lecturas=c(lecturas,c(107,99,107,148,150,122,120,147,121,67,150,127,175,157,139,119,123,102,165,97,160,127,142))#
+lecturas=c(lecturas,c(128,136,139,142,112,125,89,81,117,102,97,144,110,126,168,126,121,157,119,176,142,102,172))#
+lecturas=c(lecturas,c(113,142,151,106,103,127,143,152,105,109,144,105,128,157,125,141,142,137,114,125,145,128))#
+lecturas=c(lecturas,c(144,155,157,140,137,143,93,120,156,94,149,109,155,131,121,137,142,121,165,115,129,143,131))#
+lecturas=c(lecturas,c(90,117,116,147,129,131,117,110,111,114,113,125,97,136,140,131,156,139,134,134,131,147,125,140,137,161,131,120,150,142,119,129,127))#
+lecturas=c(lecturas,c(149,137,111,107,149,132,128,123,126,117,109,112,119,137,155,104,113,137,133,166,157,158,170,173,126,140,147,176,142,168,116,122,161,123,123,129,142,128,167,175,151,147,147,143,115,123,130,116,115,123,133,142,118,123,136,117,131,133,119,125,107,139,163,161,162,155,121,117,142,122,154,151,158,154,159,164,131,167,102,176,128,130,128))#
+lecturas=c(lecturas,c(128,130,105,122,126,171,150,126,109,122,140,131,136))#
+lecturas=c(lecturas,c(126,128,169,83,96,101,129,108,112,99,101,107,130,93,114,98,94,135,124,162,104,93,110,111,96))#
+lecturas=c(lecturas,c(153,136,126,136,87,119,136,86,89,89,80,104,110,106,108,115,86,113,131,151,118,128))#
+lecturas=c(lecturas,c(109,122,120,128,146,147,135,155,132,102,154,101,126,143,105,108,118,114,116,106,100,111,121,160,149,131,118,101,80,131,107,112,118))#
+lecturas=c(lecturas,c(136,122,102,123,131,91,113,123,87,120,129,104,106,143,147))#
+lecturas=c(lecturas,c(163,134,132,118,81,134,159,109,121,101,137,127,129,155,150,99,114,129,118,108))#
+lecturas=c(lecturas,120,113,119,186,144,111,98,105,154,160,130,104,97,161,124,148)#
+lecturas=c(lecturas,137,133,127,112,125,129,120,101,163,137,151,171,128,151,153,100)#
+lecturas=c(lecturas,145,147,137,179,158,131,105,149,139,129,123,166,123,141,132,130,152)#
+lecturas=c(lecturas,162,157,178,100,147,144,129,129,127,177,144,136)#
+xmin=-8#
+#xmin=4000#
+plot(fechas,lecturas,ylab='glucemia (mg/lt)',ylim=c(50,500),xlab="días desde el comienzo de la medicación",xlim=c(xmin,max(fechas,fechasaux,fechaspeso)),pch=15,cex=.6)#
+#
+lines(c(-8,15,53,78,171,338,581,1190,1281,1756,3278,3598,4367),c(442,174,120,123,115,86,110,125,134,146,124,156,165),type='p',col='red')#
+#
+lines(fechas,lecturas)#
+#
+#lines(fechasaux,lecturasaux,type='p',pch=1)#
+#
+lines(c(14,44),c(480,480),col='gray')#
+lines(c(75,104),c(480,480),col='gray')#
+lines(c(137,165),c(480,480),col='gray')#
+lines(c(196,226),c(480,480),col='gray')#
+lines(c(257,287),c(480,480),col='gray')#
+lines(c(317,348),c(480,480),col='gray')#
+lines(c(378,409),c(480,480),col='gray')#
+lines(c(439,470),c(480,480),col='gray')#
+lines(c(501,528),c(480,480),col='gray')#
+lines(c(560,590),c(480,480),col='gray')#
+lines(c(621,651),c(480,480),col='gray')#
+lines(c(682,713),c(480,480),col='gray')#
+lines(c(743,774),c(480,480),col='gray')#
+lines(c(804,835),c(480,480),col='gray')#
+lines(c(866,894),c(480,480),col='gray')#
+lines(c(925,955),c(480,480),col='gray')#
+lines(c(986,1016),c(480,480),col='gray')#
+for(h in 1:10){hh=h*365#
+	if(4*floor(h/4)==h)hh=hh+1#
+lines(c(682,713)+hh,c(480,480),col='gray')#
+lines(c(743,774)+hh,c(480,480),col='gray')#
+lines(c(804,835)+hh,c(480,480),col='gray')#
+lines(c(866,894)+hh,c(480,480),col='gray')#
+lines(c(925,955)+hh,c(480,480),col='gray')#
+lines(c(986,1016)+hh,c(480,480),col='gray')#
+}#
+#
+text(28,500,labels='oct',cex=.6)#
+text(58,500,labels='nov',cex=.6)#
+text(92,500,labels='dic',cex=.6)#
+mes=c("ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic")#
+me=c(119,150,179,209,239,270,300,331,361,391,421,451)#
+for(a in 0:12){#
+	for(b in 1:12){#
+		ain=a*365+floor(a/4)+me[b]#
+		text(ain,500,labels=mes[b],cex=.6)#
+		}}#
+#
+text(85,456,labels='2013',cex=.5)#
+text(122,456,labels='2014',cex=.5)#
+lines(c(104,104),c(450,475),col='gray')#
+text(450,456,labels='2014',cex=.5)#
+text(487,456,labels='2015',cex=.5)#
+lines(c(469,469),c(450,475),col='gray')#
+text(815,456,labels='2015',cex=.5)#
+text(852,456,labels='2016',cex=.5)#
+lines(c(834,834),c(450,475),col='gray')#
+text(815+365,456,labels='2016',cex=.5)#
+text(852+365,456,labels='2017',cex=.5)#
+lines(c(834+365,834+365),c(450,475),col='gray')#
+text(815+365+365,456,labels='2017',cex=.5)#
+text(852+365+365,456,labels='2018',cex=.5)#
+lines(c(834+365+365,834+365+365),c(450,475),col='gray')#
+text(815+365+365+365,456,labels='2018',cex=.5)#
+text(852+365+365+365,456,labels='2019',cex=.5)#
+lines(c(834+365+365+365,834+365+365+365),c(450,475),col='gray')#
+text(815+365+365+365+365,456,labels='2019',cex=.5)#
+text(852+365+365+365+365,456,labels='2020',cex=.5)#
+lines(c(834+365+365+365+365,834+365+365+365+365),c(450,475),col='gray')#
+text(815+365+365+365+365+366,456,labels='2020',cex=.5)#
+text(852+365+365+365+365+366,456,labels='2021',cex=.5)#
+lines(c(834+365+365+365+365+366,834+365+365+365+365+366),c(450,475),col='gray')#
+text(815+365+365+365+365+366+365,456,labels='2021',cex=.5)#
+text(852+365+365+365+365+366+365,456,labels='2022',cex=.5)#
+lines(c(834+365+365+365+365+366+365,834+365+365+365+365+366+365),c(450,475),col='gray')#
+text(815+365+365+365+365+366+365+365,456,labels='2022',cex=.5)#
+text(852+365+365+365+365+366+365+365,456,labels='2023',cex=.5)#
+lines(c(834+365+365+365+365+366+365+365,834+365+365+365+365+366+365+365),c(450,475),col='gray')#
+text(815+7*365+366,456,labels='2023',cex=.5)#
+text(852+7*365+366,456,labels='2024',cex=.5)#
+lines(c(834+7*365+366,834+7*365+366),c(450,475),col='gray')#
+text(815+7*365+2*366,456,labels='2024',cex=.5)#
+text(852+7*365+2*366,456,labels='2025',cex=.5)#
+lines(c(834+7*365+2*366,834+7*365+2*366),c(450,475),col='gray')#
+text(815+8*365+2*366,456,labels='2025',cex=.5)#
+text(852+8*365+2*366,456,labels='2026',cex=.5)#
+lines(c(834+8*365+2*366,834+8*365+2*366),c(450,475),col='gray')#
+abline(h=c(70,100),col='green',lwd=2)#
+abline(h=c(60,120),col='green',lty=3,lwd=3)#
+abline(v=0)#
+abline(h=442,lty=3)#
+lines(fechas,lecturas,type='p',pch=15,cex=.6)#
+ff=fechas[length(fechas)]#
+fff=ff-xmin#
+cin=5*(ff+8)/34#
+die=10*(ff+8)/34#
+text(xmin+fff*.86,400,label='con extracción de sangre')#
+text(xmin+fff*.86,370,label='NIPRO "TRUE result"     ')#
+lines(xmin+fff*.72,400,type='p',col='red')#
+lines(xmin+fff*.72,370,type='p',pch=15,cex=.6)#
+#
+lines(c(xmin+fff*.70,xmin+fff,xmin+fff,xmin+fff*.70,xmin+fff*.70),c(350,350,420,420,350))#
+#
+lines(c(3356,3356),c(40,60))#
+text(3330,50,label='Diaformina 500',cex=.5)#
+text(3380,50,label='Diaformina XR 500',cex=.5)#
+#
+par(new=TRUE)#
+#
+plot(fechaspeso,lecturaspeso,xlim=c(xmin,max(fechas,fechasaux,fechaspeso)),ylim=c(55,100),pch=4,axes=FALSE,col='blue',ylab='',xlab='')#
+axis(side = 4, at = c(70,75,80,85,90),ylab='',xlab='')     #
+mtext("y2", side = 4, line = 3)#
+pes1=1.67^2*25#
+pes2=1.67^2*30#
+xpes=3280#
+xpes=xmin#
+lines(c(xpes,4500),c(pes1,pes1),col='lightblue',lwd=3)#
+lines(c(xpes,4500),c(pes2,pes2),col='lightblue',lwd=3)#
+#
+#lines(c(xpes,xmin+fff*.70-1),c(pes2,pes2),col='lightblue',lwd=3)#
+#lines(c(xmin+fff+1,4000),c(pes2,pes2),col='lightblue',lwd=3)#
+#
+text(max(xpes,xmin),pes1-1,labels="peso normal", col='lightblue',pos=4)#
+text(max(xpes,xmin),pes2+1,labels="obesidad", col='lightblue',pos=4)#
+save(fechas,file='fechasdiab')#
+save(lecturas,file='lecturasdiab')
+library(mnt)
+g=c(112.13,515.03,185.21,4910.10,2395.58,167.21,934.43,92.46,1584.78,1258.14,1234.10,663.18,265.83,92.46,314.99,20000,114.62,95.41)
+sum(g)
+297777,37-sum(g)
+orig=297777,37
+orig=297777.37
+orig-sum(g)
+g=c(112.13,515.03,185.21,4910.10,2305.58,167.21,934.43,92.46,1584.78,1258.14,1254.10,663.18,265.83,92.46,314.99,20000,114.62,95.41)
+orig-sum(g)
+m=c(112.13,700.24,4910.10,167.21,2305.58,934.43,829.01,1584.78,1258.14,92.46,1254.1,92.46,663.18,265.83,114.82,20000,314.99,95.41)
+sum(m)
+sum(g)
+sum(m)-sum(g)
+m=c(112.13,700.24,4910.10,167.21,2305.58,934.43,265.83,663.18,1584.78,1258.14,92.46,1254.1,92.46,663.18,265.83,114.82,20000,314.99,95.41)
+length(m)
+length(g)
+m=c(112.13,700.24,4910.10,167.21,2305.58,934.43,265.83,663.18,1584.78,1258.14,92.46,1254.1,92.46,114.82,20000,314.99,95.41)
+sum(m)
+sum(g)
+floor(m)
+m-floor(m)
+g-floor(g)
+if (!requireNamespace('mnt', quietly = TRUE))install.packages('mnt')#
+#
+if (!requireNamespace('mvnormtest', quietly = TRUE))install.packages('mvnormtest')#
+#
+library(mnt)#
+library(MVN)#
+library(mvtnorm)#
+library(PearsonDS)#
+#
+library(mvnormtest)
+install.packages('/Volumes/ToshibaBlack/MuniCandS/R-package-MuniCandS/MuniCandS_0.1.0.tar.gz')#
+library(MuniCandS)
+mshapiro.test
+for(i in 1:10000){}
+for(i in 1:10000){
+X=matrix(rnorm(150),50,3)
+res=c()
+for(i in 1:10000){
+X=matrix(rnorm(150),50,3)
+res=c(res,mshapiro.test(t(X))[2])
+}
+mean(res<.05)
+plot(sort(res))
+res
+class(res)
+unlist(res)
+mean(unlist(res)<.05)
+plot(sort(unlist(res)))
+res=c()
+for(i in 1:10000){
+X=matrix(rnorm(150),50,3)
+res=c(res,mshapiro.test(X)[2])
+}
+parallel::detectCores()
+usethis::use_git_ignore(c(#
+  ".Rhistory",#
+  ".RData",#
+  ".Rproj.user",#
+  "*.tar.gz"#
+))
+usethis::use_github()
+usethis::create_github_token()#
+gitcreds::gitcreds_set()
