@@ -58,5 +58,5 @@ the hypercube*. To appear in *Statistica*. arXiv:2509.06134.
 
 ## Authors
 
-- Alejandra Cabaña — Universitat Autònoma de Barcelona
+- Alejandra Cabaña — Universitat Autònoma de Barcelona, Spain
 - Enrique M. Cabaña - PEDECIBA, Uruguay
