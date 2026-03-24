@@ -59,4 +59,4 @@ the hypercube*. To appear in *Statistica*. arXiv:2509.06134.
 ## Authors
 
 - Alejandra Cabaña — Universitat Autònoma de Barcelona
-- Enrique M. Cabaña
+- Enrique M. Cabaña - PEDECIBA, Uruguay
