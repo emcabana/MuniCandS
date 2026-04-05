@@ -2,54 +2,94 @@
 % Please edit documentation in R/MuniCandS.R
 \name{MuniCandS}
 \alias{MuniCandS}
-\title{Multivariate test of uniformity, normality and isotropy on C and S}
+\title{Multivariate tests of uniformity, normality, spherical and elliptical symmetry, and independence}
 \usage{
-MuniCandS(Z, type, hmin = 1, hmax = Inf, repet = 999, semilla = 123)
+MuniCandS(
+  Z,
+  type,
+  hmin = 1,
+  hmax = Inf,
+  repet = 1000,
+  semilla = NULL,
+  MC = 1000,
+  full = FALSE,
+  graph = FALSE,
+  parallel = FALSE
+)
 }
 \arguments{
-\item{Z}{n x p matrix. Each row is an element of the sample.}
+\item{Z}{Numeric \eqn{n \times p} matrix. Each row represents one sample element.}
 
 \item{type}{Character string specifying the null hypothesis:
 \itemize{
-\item \code{"UC"} — Uniformity on the p-dimensional cube C_p.
-\item \code{"US"} — Uniformity on the (p-1)-dimensional sphere.
-\item \code{"N"} — Normality on R^p.
-\item \code{"I"} — Isotropy on R^p.
+\item \code{"UC"} — Uniformity on \eqn{[0,1]^p}.
+\item \code{"US"} — Uniformity on \eqn{S^{p-1}}.
+\item \code{"N"} — Normality on \eqn{R^p}.
+\item \code{"I"} — Isotropy (spherical symmetry) on \eqn{R^p}.
+\item \code{"E"} — Elliptical symmetry on \eqn{R^p}.
+\item \code{"IN"} — Independence on \eqn{R^p}.
 }}
 
-\item{hmin}{Integer, minimum subset size to consider.}
+\item{hmin}{Integer. Minimum subset size to include.}
 
-\item{hmax}{Integer, maximum subset size to consider (use Inf for no upper bound).}
+\item{hmax}{Integer. Maximum subset size to include (use \code{Inf} for no upper bound).}
 
-\item{repet}{Integer, number of Monte Carlo repetitions used to estimate the p-value.}
+\item{repet}{Integer. Number of Monte Carlo repetitions for the first simulation.}
 
-\item{semilla}{Integer, random seed for reproducibility.}
+\item{semilla}{Integer. Random seed for reproducibility.}
+
+\item{MC}{Integer. Number of Monte Carlo repetitions for the second simulation.}
+
+\item{full}{Logical. If \code{TRUE}, includes intermediate results
+from the first Monte Carlo simulation in the returned values.}
+
+\item{graph}{Logical. If \code{TRUE}, plots the vector of p-values
+and prints the list of subsets used in the computation.}
+
+\item{parallel}{Logical. If \code{TRUE}, parallelization is used.}
 }
 \value{
-A named numeric vector with the p-values of the m- and s-tests.
+A named numeric vector of length 2 containing the p-values of the
+m- and s-tests. If \code{full = TRUE}, the return also includes the intermediate
+p-values obtained before the second Monte Carlo simulation.
 }
 \description{
-Performs uniformity tests on \eqn{C_p=[0,1]^p} and S^p,
-and normality and isotropy tests on R^p
+Implements uniformity tests on \eqn{C_p = [0,1]^p} and \eqn{S^p},
+as well as tests of normality, isotropy (spherical symmetry), ellipticity (elliptical symmetry),
+and independence on \eqn{R^p}.
 }
 \details{
-The central piece is a fast implementation of the m- and s-tests
-introduced by the authors in
-\emph{Brownian sheet and uniformity tests on the hyperecube}, arXiv 2509.06134.
-It receives a multivariate sample and either
-computes directly the p-values of the uniformity tests, or
-transforms the sample from S^p to C_p for uniformity on S^p,
-or from R^p to C_p for normality and for isotropy, and
-computes the p-values for the m- and s-tests.
-MuniCandS performs the original tests,
-MUCS corrects the p-values for finite samples
-by using the results of 10000 simulations of MuniCandS.
+The core of the method is a fast implementation of the m- and s-tests
+introduced in \emph{Brownian sheet and uniformity tests on the hypercube}, arXiv:2509.06134.
+Given a multivariate sample, the function either:
+\itemize{
+\item directly computes p-values for uniformity tests,
+\item transforms the sample from \eqn{S^p} to \eqn{C_p} for uniformity on \eqn{S^p},
+\item transforms the sample from \eqn{R^p} to \eqn{C_p} for normality, isotropy,
+ellipticity, or independence, and then computes p-values for the m- and s-tests.
+}
+
+The main test statistics are the squared norms \eqn{b_H^2} of the zero-marginal random
+components of the empirical process associated with subsets
+\eqn{H \subset J := \{1,2,\dots,p\}}. By default, all nonempty subsets are included,
+unless restricted by \code{hmin} and \code{hmax}.
+The \eqn{b_H^2} are asymptotically independent with distribution function \eqn{P_H},
+so that the vector of p-values \eqn{1 - P_H(b_H^2)} is asymptotically uniform on
+\eqn{[0,1]^{2^p-1}}.
+
+A first Monte Carlo simulation estimates the finite-sample distribution of the \eqn{b_H^2},
+yielding p-values and the combined statistics
+\deqn{p_{min} = 1 - (1 - \min(pvals))^{\mathrm{length}(pvals)}}
+and
+\deqn{p_{sum} = 1 - \mathrm{pchisq}(\sum(\mathrm{qchisq}(1 - pvals, df = 1), df = \mathrm{length}(pvals))},
+both asymptotically uniform on \eqn{[0,1]} under the null hypothesis.
+
+A second Monte Carlo simulation of \eqn{p_{\min}} and \eqn{p_{\mathrm{sum}}}
+corrects their null distribution by accounting for the finite-sample dependence
+among the p-values.
 }
 \examples{
 \dontrun{
 set.seed(1)
 Z <- matrix(runif(150), ncol = 3)
 MuniCandS(Z, type = "UC")
-}
-
-}
