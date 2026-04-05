@@ -1,34 +1,63 @@
-#' @title Multivariate test of uniformity, normality and isotropy on C and S
+.MuniCandS_cache <- new.env(parent = emptyenv())
+
+#' @title Multivariate tests of uniformity, normality, spherical and elliptical symmetry, and independence
 #'
-#' @description Performs uniformity tests on \eqn{C_p=[0,1]^p} and S^p,
-#' and normality and isotropy tests on R^p
+#' @description Implements uniformity tests on \eqn{C_p = [0,1]^p} and \eqn{S^p},
+#' as well as tests of normality, isotropy (spherical symmetry), ellipticity (elliptical symmetry),
+#' and independence on \eqn{R^p}.
 #'
-#' @details
-#' The central piece is a fast implementation of the m- and s-tests
-#' introduced by the authors in 
-#' \emph{Brownian sheet and uniformity tests on the hyperecube}, arXiv 2509.06134.
-#' It receives a multivariate sample and either
-#' computes directly the p-values of the uniformity tests, or
-#' transforms the sample from S^p to C_p for uniformity on S^p,
-#' or from R^p to C_p for normality and for isotropy, and
-#' computes the p-values for the m- and s-tests.
-#' MuniCandS performs the original tests,
-#' MUCS corrects the p-values for finite samples
-#' by using the results of 10000 simulations of MuniCandS.
-#' @param Z n x p matrix. Each row is an element of the sample.
+#' @details The core of the method is a fast implementation of the m- and s-tests
+#' introduced in \emph{Brownian sheet and uniformity tests on the hypercube}, arXiv:2509.06134.
+#' Given a multivariate sample, the function either:
+#' \itemize{
+#'   \item directly computes p-values for uniformity tests,
+#'   \item transforms the sample from \eqn{S^p} to \eqn{C_p} for uniformity on \eqn{S^p},
+#'   \item transforms the sample from \eqn{R^p} to \eqn{C_p} for normality, isotropy,
+#'         ellipticity, or independence, and then computes p-values for the m- and s-tests.
+#' }
+#'
+#' The main test statistics are the squared norms \eqn{b_H^2} of the zero-marginal random
+#' components of the empirical process associated with subsets
+#' \eqn{H \subset J := \{1,2,\dots,p\}}. By default, all nonempty subsets are included,
+#' unless restricted by \code{hmin} and \code{hmax}.
+#' The \eqn{b_H^2} are asymptotically independent with distribution function \eqn{P_H},
+#' so that the vector of p-values \eqn{1 - P_H(b_H^2)} is asymptotically uniform on
+#' \eqn{[0,1]^{2^p-1}}.
+#'
+#' A first Monte Carlo simulation estimates the finite-sample distribution of the \eqn{b_H^2},
+#' yielding p-values and the combined statistics
+#' \deqn{p_{min} = 1 - (1 - \min(pvals))^{\mathrm{length}(pvals)}}
+#' and
+#' \deqn{p_{sum} = 1 - \mathrm{pchisq}(\sum(\mathrm{qchisq}(1 - pvals, df = 1), df = \mathrm{length}(pvals))},
+#' both asymptotically uniform on \eqn{[0,1]} under the null hypothesis.
+#'
+#' A second Monte Carlo simulation of \eqn{p_{\min}} and \eqn{p_{\mathrm{sum}}}
+#' corrects their null distribution by accounting for the finite-sample dependence
+#' among the p-values.
+#' @param Z Numeric \eqn{n \times p} matrix. Each row represents one sample element.
 #' @param type Character string specifying the null hypothesis:
 #'   \itemize{
-#'     \item `"UC"` — Uniformity on the p-dimensional cube C_p.
-#'     \item `"US"` — Uniformity on the (p-1)-dimensional sphere.
-#'     \item `"N"` — Normality on R^p.
-#'     \item `"I"` — Isotropy on R^p.
+#'     \item `"UC"` — Uniformity on \eqn{[0,1]^p}.
+#'     \item `"US"` — Uniformity on \eqn{S^{p-1}}.
+#'     \item `"N"` — Normality on \eqn{R^p}.
+#'     \item `"I"` — Isotropy (spherical symmetry) on \eqn{R^p}.
+#'     \item `"E"` — Elliptical symmetry on \eqn{R^p}.
+#'     \item `"IN"` — Independence on \eqn{R^p}.
 #'   }
-#' @param hmin Integer, minimum subset size to consider.
-#' @param hmax Integer, maximum subset size to consider (use Inf for no upper bound).
-#' @param repet Integer, number of Monte Carlo repetitions used to estimate the p-value.
-#' @param semilla Integer, random seed for reproducibility.
+#' @param hmin Integer. Minimum subset size to include.
+#' @param hmax Integer. Maximum subset size to include (use \code{Inf} for no upper bound).
+#' @param repet Integer. Number of Monte Carlo repetitions for the first simulation.
+#' @param MC Integer. Number of Monte Carlo repetitions for the second simulation.
+#' @param semilla Integer. Random seed for reproducibility.
+#' @param parallel Logical. If \code{TRUE}, parallelization is used.
+#' @param graph Logical. If \code{TRUE}, plots the vector of p-values
+#'   and prints the list of subsets used in the computation.
+#' @param full Logical. If \code{TRUE}, includes intermediate results
+#'   from the first Monte Carlo simulation in the returned values.
 #'
-#' @return A named numeric vector with the p-values of the m- and s-tests.
+#' @return A named numeric vector of length 2 containing the p-values of the
+#' m- and s-tests. If \code{full = TRUE}, the return also includes the intermediate
+#' p-values obtained before the second Monte Carlo simulation.
 #'
 #' @examples
 #' \dontrun{
@@ -36,46 +65,105 @@
 #' Z <- matrix(runif(150), ncol = 3)
 #' MuniCandS(Z, type = "UC")
 #' }
-#'
+##########################################
+### FUNCION PRINCIPAL 
+##########################################
 #' @export
-MuniCandS <- function(Z, type, hmin = 1, hmax = Inf, repet = 999, semilla = 123) {
-  if (!is.matrix(Z)) stop("Z debe ser una matriz")
+MuniCandS <- function(Z, type, hmin = 1, hmax = Inf, repet = 1000, semilla = NULL, MC = 1000, full = FALSE,graph=FALSE,parallel = FALSE) {
 
   n <- nrow(Z)
+  p <- ncol(Z)
   
-  datap=dataproc(Z,type)
-  X=datap$X
-  variance=datap$variance
-  p <- ncol(X)
-  H_list=genlist(hmin,hmax,p)
-  if(type=='I') H_list[[p]] <- NULL
-  T_H2=calcest(X,H_list)
-  pvals=calcpvals(T_H2,n,p,repet,H_list,variance=datap$variance,type=type)
+  if(type=='US')px <- p-1 else px <- p
+
+  H_list <- genlist(hmin, hmax, px)
+
+  BHname <- paste0("BH=", n, p, hmin, hmax, type, repet, MC)
+
+  if (!exists(BHname, envir = .MuniCandS_cache)) {
+
+    # Configura plan de paralelización (opcional)
+    
+    if(parallel==TRUE) cores <- parallelly::availableCores() - 1 else cores <- 1
+    
+    future::plan(future::multisession, workers = cores)
+
+    if (!is.null(semilla)) set.seed(semilla)
+
+    res <- future.apply::future_lapply(1:repet, function(i) {
+      X2bH(Z2X(G2Z(n, p, type), type), H_list)
+    }, future.seed = TRUE)
+
+    BH <- do.call(rbind, res)
+    assign(BHname, BH, envir = .MuniCandS_cache)
+  }
+
+  BH <- get(BHname, envir = .MuniCandS_cache)
+
+  PVname <- paste0("PV", n, p, hmin, hmax, type, repet, MC)
+
+  if (!exists(PVname, envir = .MuniCandS_cache)) {
+
+    future::plan(future::multisession, workers = 1)
+
+
+    res <- future.apply::future_lapply(1:MC, function(i) {
+      pvals2pv(bHBH2pvals(X2bH(Z2X(G2Z(n, p, type), type), H_list), BH), H_list)
+    }, future.seed = TRUE)
+
+    PV <- do.call(rbind, res)
+    assign(PVname, PV, envir = .MuniCandS_cache)
+  }
+
+  PV <- get(PVname, envir = .MuniCandS_cache)
+
+  pvals <- bHBH2pvals(X2bH(Z2X(Z, type), H_list), BH)
+  pvmys0 <- pvals2pv(pvals, H_list)
+  pvmys <- pvPV2mys(pvmys0, PV)
+  names(pvmys) <- c('m-test','s-test')
   
-  
-  pmin=min(pvals)
-  suma=sum(qchisq(1 - pvals, df = 1))
-  
-  m_p_value <- 1 - (1 - pmin)^length(H_list)
-  s_p_value <- 1 - pchisq(suma, df = length(H_list))
-  return(c(m_p_value = m_p_value, s_p_value = s_p_value))
+  if (graph==TRUE){plot(pvals,ylim=c(0,1),pch=15)
+  	print(H_list)}
+
+  if (full==FALSE) return(pvmys) else return(c(pvmys0, pvmys))
+}
+##########################################
+### FUNCIONES BASICAS 
+##########################################
+
+G2Z=function(n,p,type){
+	 if(type %in% c("E","N")){
+  	ZS <- matrix(rnorm(n*p),n,p)
+  }
+  if(type %in% c("UC","IN")){
+    ZS <- matrix(runif(n * p), n, p)
+    }
+  if(type%in% c("US","I")){
+  	 ZS=matrix(rnorm(n*p),n,p)
+  	 if(type=="US")ZS=ZS/sqrt(rowSums(ZS^2))
+  }
+return(ZS)
 }
 
-
-  # Initial processing of the data  
-  
-dataproc <- function(Z, type) {
-  n <- nrow(Z)
+Z2X=function(Z,type){
+	  n <- nrow(Z)
   p <- ncol(Z)
   X <- Z
   variance <- NA
 
   if (type == "US") {
-    X <- matrix(NA, n, p-1)
-    for (i in 1:n) X[i, ] <- S2C(Z[i, ])
+    X <- S2C(Z) #matrix(NA, n, p-1)
+  #  for (i in 1:n) X[i, ] <- S2C(Z[i, ])
   }
 
-  if (type == "I") {
+  if (type == "E") {
+    ZC <- scale(Z, center = TRUE, scale = FALSE)
+    variance <- crossprod(ZC) / n
+    eig <- eigen(variance)
+    Z <- ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors)/sqrt(n)
+  }
+
+  if (type %in% c("I","E")) {
     rho <- sqrt(rowSums(Z^2))
     Z0 <- Z / rho
     X <- matrix(NA, n, p-1)
@@ -87,10 +175,53 @@ dataproc <- function(Z, type) {
     ZC <- scale(Z, center = TRUE, scale = FALSE)
     variance <- crossprod(ZC) / n
     eig <- eigen(variance)
-    X <- pnorm(ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors))
+    X <- pnorm(ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors)/sqrt(n))
   }
 
-  list(X = X, variance = variance)
+ if (type == 'IN') {
+  	for(j in 1:p) X[,j]=rank(X[,j])/(n+1)
+  }
+
+  return(X)
+}
+
+X2bH=function(X,H_list){
+	X <- as.matrix(X)
+	bH <- sapply(H_list, function(H) calc_est_arma(X, as.integer(H) - 1))
+	# Armadillo usa 0-based
+	return(bH)
+}
+
+bHBH2pvals=function(bH,BH){
+  resu <- numeric(ncol(BH))
+  for (i in seq_len(ncol(BH))) {
+    resu[i] <- ajus(bH[i], sort(BH[, i]))
+  }
+  resu[resu < 0] <- 0
+  return(resu)
+}
+
+pvals2pv=function(pvals,H_list){
+	pmin=min(pvals)
+	suma=sum(qchisq(1 - pvals, df = 1))
+  
+	m_p_value <- 1 - (1 - pmin)^length(H_list)
+	s_p_value <- 1 - pchisq(suma, df = length(H_list))
+	return(c(m_p_value, s_p_value))
+}
+
+pvPV2mys=function(pv,PV){
+	mys=c(evlin(pv[1],sort(PV[,1])),evlin(pv[2],sort(PV[,2])))
+	return(mys)
+}
+
+##########################################
+### FUNCIONES AUXILIARES 
+##########################################
+
+evlin=function(u,f){ff=c(0,sort(f),1)
+	sf=max(which(ff<=u))
+	return(((u-ff[sf])*(sf+1)+(ff[sf+1]-u)*sf)/((ff[sf+1]-ff[sf])*(length(ff)+1)))
 }
 
    # Generation of the subsets H of J={0,1,...,p}
@@ -102,54 +233,15 @@ dataproc <- function(Z, type) {
   return(H_list)
 }
 
-  #Computation of the statistics ||T_H||^2
-  
-calcest <- function(X, H_list) {
-  X <- as.matrix(X)
-  sapply(H_list, function(H) calc_est_arma(X, as.integer(H) - 1)) # Armadillo usa 0-based
-}
-
-	
-  # Simulation of samples under the null hypothesis
-   
-simsamp <- function(n, p, variance = diag(p), type) {
-  if (type == "N") {
-    X <- mvtnorm::rmvnorm(n, rep(0, p), variance)
-    XC <- scale(X, center = TRUE, scale = FALSE)
-    eig <- eigen(variance)
-    X <- pnorm(XC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors))
-  } else {
-    X <- matrix(runif(n * p), n, p)
-    if (type == "I") X[, p] <- rank(X[, p]) / (n + 1)
-  }
-  X
-}
-
-  # Estimation of the p-values by simulation
-calcpvals <- function(T_H2, n, p, repet, H_list, variance = diag(p), type) {
-  sim_stats <- parallel::mclapply(1:repet, function(rep) {
-    samp <- simsamp(n, p, variance, type)
-    calcest(samp, H_list)
-  }, mc.cores = parallel::detectCores())
-
-  sim_matrix <- do.call(rbind, sim_stats)
-  resu=c()
-  for(i in 1:ncol(sim_matrix))resu <- c(resu,ajus(T_H2[i],sort(sim_matrix[,i])))
-  resu[resu<0]=0
-  return(resu)
-}
-
-
-
-S2C <- function(Z) {
+ S2C <- function(Z) {
   if (is.matrix(Z)) {
     n <- nrow(Z)
-    U <- matrix(NA, n, ncol(Z))
+    U <- matrix(NA, n, ncol(Z)-1)
     for (i in 1:n) U[i, ] <- Cpi2C(S2Cpi(Z[i, ]))
   } else {
     U <- Cpi2C(S2Cpi(Z))
   }
-  U
+  return(U)
 }
 
 Cpi2S=function(Phi){
@@ -159,30 +251,4 @@ Cpi2S=function(Phi){
 	return(Z)
 }
 
-evlin=function(u,f){ff=c(0,sort(f),1)
-	sf=max(which(ff<=u))
-	if(sf==length(ff))return(1) else return(((u-ff[sf])*(sf)+(ff[sf+1]-u)*(sf-1))/((ff[sf+1]-ff[sf])*(length(f)+1)))
- }
 
-
-#'
-#' @export
-MUCS=function(X, type, hmin = 1, hmax = Inf, repet = 999, semilla = 123, full=FALSE){
-	pv=MuniCandS(X, type=type, hmin = hmin, hmax = hmax, repet = repet, semilla = semilla)
-	n=nrow(X)
-	p=ncol(X)
-	if(type=='US')p=p-1
-	p=min(p,hmax)
-	pvd=pvdata
-	if(type=='N')pvd=pvdatan
-	if(type=='I')pvd=pvdatai
-	pvs=matrix(NA,3,2)
-	for(i in 1:3){
-pvs[i,1]=evlin(pv[1],pvd[,1,i,p-1])
-pvs[i,2]=evlin(pv[2],pvd[,2,i,p-1])
-	}
-
-evv=c(intlin(n,c(50,100,200),pvs[,1]),intlin(n,c(50,100,200),pvs[,2]))
-	
-if(full==TRUE) return(c(pv,evv)) else return(evv)
-}
