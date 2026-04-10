@@ -220,8 +220,9 @@ pvPV2mys=function(pv,PV){
 ##########################################
 
 evlin=function(u,f){ff=c(0,sort(f),1)
-	sf=max(which(ff<=u))
-	return(((u-ff[sf])*(sf+1)+(ff[sf+1]-u)*sf)/((ff[sf+1]-ff[sf])*(length(ff)+1)))
+	if (u==1) res <- 1 else{sf=max(which(ff<=u))
+	res <- ((sf+(u-ff[sf])/(ff[sf+1]-ff[sf])-1)/(length(f)+1))}
+	return(res)
 }
 
    # Generation of the subsets H of J={0,1,...,p}
