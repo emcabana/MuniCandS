@@ -45,9 +45,6 @@ MuniCandS(X, type = "N")
 
 - **`MuniCandS(X, type)`** — Applies the selected test to the data matrix `X`
   and returns two p-values (m-test and s-test).
-- **`MUCS(X, type)`** — Applies a Lilliefors-type correction using pre-computed
-  simulations stored in the package, interpolating in sample size when needed.
-  Returns corrected p-values for the m-test and s-test.
 
 ## Reference
 
