@@ -15,6 +15,7 @@ the following families:
 | `"US"` | Uniform on the hypersphere S^(*p*-1) |
 | `"N"`  | Normal in **R**^*p* |
 | `"I"`  | Isotropic (spherically symmetric) in **R**^*p* |
+| `"E"`  | Elliptic (elliptically symmetric) in **R**^*p* |
 | `"IN"` | Independent components in **R**^*p* |
 
 The tests are based on a decomposition of a *p*-parameter Brownian sheet as
