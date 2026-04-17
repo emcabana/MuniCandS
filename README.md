@@ -39,8 +39,6 @@ X <- matrix(rnorm(200), nrow = 100, ncol = 2)
 # Test normality
 MuniCandS(X, type = "N")
 
-# Test with Lilliefors-type correction
-MUCS(X, type = "N")
 ```
 
 ## Functions
