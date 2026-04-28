@@ -40,7 +40,6 @@ devtools::install_github("emcabana/MuniCandS")
 \tikzstyle{arrowg} = [thick,->,>=stealth,draw=green!70!black,text=blue!70!black]
 
 
-\begin{document}
 
 \pagecolor{white}
 \thispagestyle{empty}
