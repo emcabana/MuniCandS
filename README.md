@@ -1,4 +1,4 @@
-[diagrama.pdf](https://github.com/user-attachments/files/27145746/diagrama.pdf)
+
 # MuniCandS
 
 **Multivariate Tests of Uniformity, Normality and Isotropy on C and S**
