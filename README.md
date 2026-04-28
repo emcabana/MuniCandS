@@ -30,15 +30,6 @@ devtools::install_github("emcabana/MuniCandS")
 ``` mermaid
 
 
-\tikzstyle{ss} = [rectangle, rounded corners, minimum width=1cm, minimum height=1cm,text centered, draw=black, fill=blue!20]
-\tikzstyle{sc} = [circle, minimum width=1cm, text centered, draw=black, fill=blue!20]
-\tikzstyle{v} = [minimum width=0cm, text centered, minimum height=0cm,draw=white, fill=white]
-\tikzstyle{vc} = [circle,minimum width=0cm, text centered, text=blue!70!black,minimum height=0cm,draw=blue!70!black, fill=white]
-\tikzstyle{sg} = [circle, minimum width=1cm, text centered, text=white, draw=black, fill=gray]
-\tikzstyle{decision} = [diamond, aspect=2, text centered, draw=black, fill=orange!20]
-\tikzstyle{arrow} = [thick,->,>=stealth,draw=blue!70!black,text=blue!70!black]
-\tikzstyle{arrowg} = [thick,->,>=stealth,draw=green!70!black,text=blue!70!black]
-
 
 
 \pagecolor{white}
