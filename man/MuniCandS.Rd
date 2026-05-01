@@ -9,12 +9,13 @@ MuniCandS(
   type,
   hmin = 1,
   hmax = Inf,
-  repet = 1000,
-  semilla = NULL,
-  MC = 1000,
+  n_sim = 1000,
+  n_mc = 1000,
+  use_parallel = FALSE,
+  cache = NULL,
+  return_cache = FALSE,
   full = FALSE,
-  graph = FALSE,
-  parallel = FALSE
+  graph = FALSE
 )
 }
 \arguments{
@@ -34,22 +35,24 @@ MuniCandS(
 
 \item{hmax}{Integer. Maximum subset size to include (use \code{Inf} for no upper bound).}
 
-\item{repet}{Integer. Number of Monte Carlo repetitions for the first simulation.}
+\item{n_sim}{Integer. Number of Monte Carlo repetitions for the first simulation.}
 
-\item{semilla}{Integer. Random seed for reproducibility.}
+\item{n_mc}{Integer. Number of Monte Carlo repetitions for the second simulation.}
 
-\item{MC}{Integer. Number of Monte Carlo repetitions for the second simulation.}
+\item{use_parallel}{Logical. If \code{TRUE}, parallelization is used.}
 
-\item{full}{Logical. If \code{TRUE}, includes intermediate results
+\item{cache}{Optional list containing precomputed Monte Carlo simulations.}
+
+\item{return_cache}{Logical. If TRUE, the Monte Carlo simulations are returned for reuse.}
+
+\item{full}{Logical. If \code{TRUE}, includes all p-values resulting
 from the first Monte Carlo simulation in the returned values.}
 
 \item{graph}{Logical. If \code{TRUE}, plots the vector of p-values
 and prints the list of subsets used in the computation.}
-
-\item{parallel}{Logical. If \code{TRUE}, parallelization is used.}
 }
 \value{
-A named numeric vector of length 2 containing the p-values of the
+A list of length 2 containing the p-values of the
 m- and s-tests. If \code{full = TRUE}, the return also includes the intermediate
 p-values obtained before the second Monte Carlo simulation.
 }
@@ -60,7 +63,7 @@ and independence on \eqn{R^p}.
 }
 \details{
 The core of the method is a fast implementation of the m- and s-tests
-introduced in \emph{Brownian sheet and uniformity tests on the hypercube}, arXiv:2509.06134.
+introduced in the reference.
 Given a multivariate sample, the function either:
 \itemize{
 \item directly computes p-values for uniformity tests,
@@ -81,7 +84,7 @@ A first Monte Carlo simulation estimates the finite-sample distribution of the \
 yielding p-values and the combined statistics
 \deqn{p_{min} = 1 - (1 - \min(pvals))^{\mathrm{length}(pvals)}}
 and
-\deqn{p_{sum} = 1 - \mathrm{pchisq}(\sum(\mathrm{qchisq}(1 - pvals, df = 1), df = \mathrm{length}(pvals))},
+\deqn{p_{sum} = 1 - \mathrm{pchisq}(\sum(\mathrm{qchisq}(1 - pvals, df = 1)), df = \mathrm{length}(pvals))},
 both asymptotically uniform on \eqn{[0,1]} under the null hypothesis.
 
 A second Monte Carlo simulation of \eqn{p_{\min}} and \eqn{p_{\mathrm{sum}}}
@@ -89,7 +92,13 @@ corrects their null distribution by accounting for the finite-sample dependence
 among the p-values.
 }
 \examples{
-\dontrun{
-set.seed(1)
+\donttest{
 Z <- matrix(runif(150), ncol = 3)
-MuniCandS(Z, type = "UC")
+MuniCandS(Z, type = "UC", n_sim=100, n_mc = 100)
+}
+}
+\references{
+Cabana, A. and Cabana, E. M. (2025).
+Brownian sheet and uniformity tests on the hypercube.
+arXiv:2509.06134.
+}

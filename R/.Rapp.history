@@ -54,3 +54,36 @@ nn=c(50,100,200)
 intlin(n,nn,c(1,2,3))
 intlin(55,nn,c(1,2,3))
 intlin(155,nn,c(1,2,3))
+get(seed)
+set.seed
+.random.seed
+.Random.seed
+rnorm(1)
+theseed<-.Random.seed
+rnorm(1)
+set.seed(theseed)
+rnorm()
+rnorm(1)
+set.seed(theseed)
+rnorm(1)
+S2C <- function(Z) {#
+  if (is.matrix(Z)) {#
+    n <- nrow(Z)#
+    U <- matrix(NA, n, ncol(Z)-1)#
+    for (i in 1:n) U[i, ] <- Cpi2C(S2Cpi(Z[i, ]))#
+  } else {#
+    U <- Cpi2C(S2Cpi(Z))#
+  }#
+  return(U)#
+}
+S2C(matrix(c(1,0,0,0,1,0,0,0,1),3nrow=3)))
+S2C(matrix(c(1,0,0,0,1,0,0,0,1),nrow=3)))
+S2C(matrix(c(1,0,0,0,1,0,0,0,1),nrow=3))
+Cpi2S=function(Phi){#
+	Phi=c(Phi,0)#
+	Z=cos(Phi[1])#
+	for(j in 2:(length(Phi)))Z=c(Z,cos(Phi[j])*prod(sin(Phi[1:(j-1)])))#
+	return(Z)#
+}
+S2C(matrix(c(1,0,0,0,1,0,0,0,1),nrow=3))
+stopifnot(1==3)

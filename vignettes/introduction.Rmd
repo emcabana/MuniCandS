@@ -1,0 +1,90 @@
+---
+
+title: "Introduction to MuniCandS"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to MuniCandS}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+# Introduction
+
+`MuniCandS` implements multivariate tests of:
+
+* uniformity on the hypercube,
+* uniformity on the hypersphere,
+* normality,
+* spherical symmetry,
+* elliptical symmetry,
+* independence.
+
+The methodology for testing uniformity on the hypercube is based on a decomposition of finite signed measures into zero-marginal components, leading to a decomposition of the empirical process into asymptotically independent terms.
+
+The resulting procedures are of Cramér–von Mises type, but replace the quadratic norm of the empirical process by the collection of norms of its zero-marginal components.
+
+Further theoretical details can be found in:
+
+A. Cabaña and E. M. Cabaña (2025),
+*Brownian sheet and uniformity tests on the hypercube*,
+Statistica, to appear,
+arXiv:2509.06134.
+
+
+The fact that whenever a null hypothesis implies a joint distribution that factorizes into independent continuous components after a suitable mapping, allows to test such hypotheses by reducing the problem to a uniformity test on the hypercube via componentwise probability integral transforms.
+Specifically, the package introduces new procedures derived from these principles for testing uniformity on the hypersphere $S^p$, as well as multivariate normality, spherical and elliptical symmetry, and independence in $R^p$.
+
+
+
+# Basic example
+
+```{r}
+library(MuniCandS)
+
+set.seed(1)
+
+Z <- matrix(runif(200), ncol = 2)
+
+MuniCandS(
+  Z,
+  type = "UC",
+  n_sim = 100,
+  n_mc = 100
+)
+```
+
+# Supported hypotheses
+
+| Code   | Hypothesis                    |
+| ------ | ----------------------------- |
+| `"UC"` | Uniformity on the hypercube   |
+| `"US"` | Uniformity on the hypersphere |
+| `"N"`  | Multivariate normality        |
+| `"I"`  | Spherical symmetry            |
+| `"E"`  | Elliptical symmetry           |
+| `"IN"` | Independence                  |
+
+# Monte Carlo reuse
+
+The function supports optional caching of Monte Carlo simulations:
+
+```{r}
+res <- MuniCandS(
+  Z,
+  type = "UC",
+  n_sim = 100,
+  n_mc = 100,
+  return_cache = TRUE
+)
+
+cache <- res$cache
+```
+

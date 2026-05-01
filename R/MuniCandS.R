@@ -1,5 +1,3 @@
-.MuniCandS_cache <- new.env(parent = emptyenv())
-
 #' @title Multivariate tests of uniformity, normality, spherical and elliptical symmetry, and independence
 #'
 #' @description Implements uniformity tests on \eqn{C_p = [0,1]^p} and \eqn{S^p},
@@ -7,7 +5,7 @@
 #' and independence on \eqn{R^p}.
 #'
 #' @details The core of the method is a fast implementation of the m- and s-tests
-#' introduced in \emph{Brownian sheet and uniformity tests on the hypercube}, arXiv:2509.06134.
+#' introduced in the reference.
 #' Given a multivariate sample, the function either:
 #' \itemize{
 #'   \item directly computes p-values for uniformity tests,
@@ -28,7 +26,7 @@
 #' yielding p-values and the combined statistics
 #' \deqn{p_{min} = 1 - (1 - \min(pvals))^{\mathrm{length}(pvals)}}
 #' and
-#' \deqn{p_{sum} = 1 - \mathrm{pchisq}(\sum(\mathrm{qchisq}(1 - pvals, df = 1), df = \mathrm{length}(pvals))},
+#' \deqn{p_{sum} = 1 - \mathrm{pchisq}(\sum(\mathrm{qchisq}(1 - pvals, df = 1)), df = \mathrm{length}(pvals))},
 #' both asymptotically uniform on \eqn{[0,1]} under the null hypothesis.
 #'
 #' A second Monte Carlo simulation of \eqn{p_{\min}} and \eqn{p_{\mathrm{sum}}}
@@ -46,100 +44,152 @@
 #'   }
 #' @param hmin Integer. Minimum subset size to include.
 #' @param hmax Integer. Maximum subset size to include (use \code{Inf} for no upper bound).
-#' @param repet Integer. Number of Monte Carlo repetitions for the first simulation.
-#' @param MC Integer. Number of Monte Carlo repetitions for the second simulation.
-#' @param semilla Integer. Random seed for reproducibility.
-#' @param parallel Logical. If \code{TRUE}, parallelization is used.
+#' @param n_sim Integer. Number of Monte Carlo repetitions for the first simulation.
+#' @param n_mc Integer. Number of Monte Carlo repetitions for the second simulation.
+#' @param use_parallel Logical. If \code{TRUE}, parallelization is used.
+#' @param cache Optional list containing precomputed Monte Carlo simulations.
+#' @param return_cache Logical. If TRUE, the Monte Carlo simulations are returned for reuse.
 #' @param graph Logical. If \code{TRUE}, plots the vector of p-values
 #'   and prints the list of subsets used in the computation.
-#' @param full Logical. If \code{TRUE}, includes intermediate results
+#' @param full Logical. If \code{TRUE}, includes all p-values resulting
 #'   from the first Monte Carlo simulation in the returned values.
 #'
-#' @return A named numeric vector of length 2 containing the p-values of the
+#' @return A list of length 2 containing the p-values of the
 #' m- and s-tests. If \code{full = TRUE}, the return also includes the intermediate
 #' p-values obtained before the second Monte Carlo simulation.
 #'
+#' @references
+#' Cabana, A. and Cabana, E. M. (2025).
+#' Brownian sheet and uniformity tests on the hypercube.
+#' arXiv:2509.06134.
+#'
 #' @examples
-#' \dontrun{
-#' set.seed(1)
+#' \donttest{
 #' Z <- matrix(runif(150), ncol = 3)
-#' MuniCandS(Z, type = "UC")
+#' MuniCandS(Z, type = "UC", n_sim=100, n_mc = 100)
 #' }
 ##########################################
 ### FUNCION PRINCIPAL 
 ##########################################
 #' @export
-MuniCandS <- function(Z, type, hmin = 1, hmax = Inf, repet = 1000, semilla = NULL, MC = 1000, full = FALSE,graph=FALSE,parallel = FALSE) {
+MuniCandS <- function(
+  Z, type,
+  hmin = 1, hmax = Inf,
+  n_sim = 1000,
+  n_mc = 1000,
+  use_parallel = FALSE,
+  cache = NULL,
+  return_cache = FALSE,
+  full = FALSE,
+  graph = FALSE
+) {
+
+  stopifnot(is.matrix(Z))
+  stopifnot(type %in% c("UC","US","N","I","E","IN"))
+
 
   n <- nrow(Z)
   p <- ncol(Z)
-  
-  if(type=='US')px <- p-1 else px <- p
+  px <- if (type == "US") p - 1 else p
 
   H_list <- genlist(hmin, hmax, px)
 
-  BHname <- paste0("BH=", n, p, hmin, hmax, type, repet, MC)
-
-  if (!exists(BHname, envir = .MuniCandS_cache)) {
-
-    # Configura plan de paralelización (opcional)
-    
-    if(parallel==TRUE) cores <- parallelly::availableCores() - 1 else cores <- 1
-    
-    future::plan(future::multisession, workers = cores)
-
-    if (!is.null(semilla)) set.seed(semilla)
-
-    res <- future.apply::future_lapply(1:repet, function(i) {
-      X2bH(Z2X(G2Z(n, p, type), type), H_list)
-    }, future.seed = TRUE)
-
-    BH <- do.call(rbind, res)
-    assign(BHname, BH, envir = .MuniCandS_cache)
+  # --- validar cache ---
+  valid_cache <- FALSE
+  if (!is.null(cache)) {
+    if (!is.null(cache$params)) {
+      pars <- cache$params
+      valid_cache <- all.equal(
+        list(n=n, p=p, hmin=hmin, hmax=hmax, type=type, n_sim=n_sim, n_mc=n_mc),
+        pars
+      ) == TRUE
+    }
   }
 
-  BH <- get(BHname, envir = .MuniCandS_cache)
-
-  PVname <- paste0("PV", n, p, hmin, hmax, type, repet, MC)
-
-  if (!exists(PVname, envir = .MuniCandS_cache)) {
-
-    future::plan(future::multisession, workers = 1)
-
-
-    res <- future.apply::future_lapply(1:MC, function(i) {
-      pvals2pv(bHBH2pvals(X2bH(Z2X(G2Z(n, p, type), type), H_list), BH), H_list)
-    }, future.seed = TRUE)
-
-    PV <- do.call(rbind, res)
-    assign(PVname, PV, envir = .MuniCandS_cache)
+  # --- backend ---
+  lapply_fun <- lapply
+  if (use_parallel) {
+    lapply_fun <- function(X, FUN) {
+      future.apply::future_lapply(X, FUN, future.seed = TRUE)
+    }
   }
 
-  PV <- get(PVname, envir = .MuniCandS_cache)
+  # --- BH ---
+  if (valid_cache && !is.null(cache$BH)) {
+    BH <- cache$BH
+  } else {
+    BH <- do.call(rbind,
+      lapply_fun(1:n_sim, function(i) {
+        X2bH(Z2X(G2Z(n, p, type), type), H_list)
+      })
+    )
+  }
 
-  pvals <- bHBH2pvals(X2bH(Z2X(Z, type), H_list), BH)
+  # --- PV ---
+  if (valid_cache && !is.null(cache$PV)) {
+    PV <- cache$PV
+  } else {
+    PV <- do.call(rbind,
+      lapply_fun(1:n_mc, function(i) {
+        pvals2pv(
+          bHBH2pvals(
+            X2bH(Z2X(G2Z(n, p, type), type), H_list),
+            BH
+          ),
+          H_list
+        )
+      })
+    )
+  }
+
+  # --- datos observados ---
+  pvals <- bHBH2pvals(
+    X2bH(Z2X(Z, type), H_list),
+    BH
+  )
+
   pvmys0 <- pvals2pv(pvals, H_list)
-  pvmys <- pvPV2mys(pvmys0, PV)
-  names(pvmys) <- c('m-test','s-test')
-  
-  if (graph==TRUE){plot(pvals,ylim=c(0,1),pch=15)
-  	print(H_list)}
+  pvmys  <- pvPV2mys(pvmys0, PV)
 
-  if (full==FALSE) return(pvmys) else return(c(pvmys0, pvmys))
+  names(pvmys) <- c("m-test", "s-test")
+
+  if (graph) {
+    plot(pvals, ylim = c(0, 1), pch = 15)
+    print(H_list)
+  }
+
+  new_cache <- list(
+    BH = BH,
+    PV = PV,
+    params = list(
+      n = n, p = p,
+      hmin = hmin, hmax = hmax,
+      type = type,
+      n_sim = n_sim, n_mc = n_mc
+    )
+  )
+
+  if (return_cache) {
+    return(list(result = pvmys, cache = new_cache))
+  }
+
+  if (!full) return(list(pvals=pvmys))
+  return(list(pvals.all=pvmys0, pvals=pvmys))
 }
+
 ##########################################
 ### FUNCIONES BASICAS 
 ##########################################
 
 G2Z=function(n,p,type){
 	 if(type %in% c("E","N")){
-  	ZS <- matrix(rnorm(n*p),n,p)
+  	ZS <- matrix(stats::rnorm(n*p),n,p)
   }
   if(type %in% c("UC","IN")){
     ZS <- matrix(runif(n * p), n, p)
     }
   if(type%in% c("US","I")){
-  	 ZS=matrix(rnorm(n*p),n,p)
+  	 ZS=matrix(stats::rnorm(n*p),n,p)
   	 if(type=="US")ZS=ZS/sqrt(rowSums(ZS^2))
   }
 return(ZS)

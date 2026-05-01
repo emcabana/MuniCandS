@@ -3,8 +3,25 @@
 \docType{package}
 \name{MuniCandS-package}
 \alias{MuniCandS-package}
-\title{MuniCandS: Multivariate Tests of Uniformity, Normality and Isotropy on C and S}
+\title{MuniCandS: Multivariate Tests of Uniformity, Normality, Symmetry and Independence}
 \description{
-Implements tests of uniformity on the hypercube C_p = [0,1]^p and on the hypersphere S^p, and tests of normality and isotropy on R^p for p = 1, 2, .... The tests are of the Cramer-von Mises type, based on a decomposition of a p-parameter Brownian sheet as the sum of 2^p independent Gaussian processes.
+Implements multivariate tests of uniformity on the hypercube and hypersphere, as well as tests of normality, spherical symmetry, elliptical symmetry and independence. The procedures are of Cramér-von Mises type and are based on a decomposition of the empirical process into asymptotically independent components.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/emcabana/MuniCandS}
+  \item Report bugs at \url{https://github.com/emcabana/MuniCandS/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Alejandra Cabana \email{AnaAlejandra.Cabana@uab.cat}
+
+Authors:
+\itemize{
+  \item Enrique M. Cabana
+}
+
 }
 \keyword{internal}

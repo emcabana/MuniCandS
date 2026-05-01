@@ -1,22 +1,19 @@
 Package: MuniCandS
 Type: Package
-Title: Multivariate Tests of Uniformity, Normality and Isotropy on C and S
-Version: 0.1.0
-Author: Alejandra Cabana [aut, cre], Enrique M. Cabana [aut]
-Maintainer: Alejandra Cabana <AnaAlejandra.Cabana@uab.cat>
-Description: Implements tests of uniformity on the hypercube C_p = [0,1]^p and on the hypersphere S^p, and tests of normality and isotropy on R^p for p = 1, 2, .... The tests are of the Cramer-von Mises type, based on a decomposition of a p-parameter Brownian sheet as the sum of 2^p independent Gaussian processes.
+Title: Multivariate Tests of Uniformity, Normality, Symmetry and Independence
+Version: 0.2.0
+Authors@R: c(person("Alejandra", "Cabana", email = "AnaAlejandra.Cabana@uab.cat", role = c("aut", "cre")), person("Enrique M.", "Cabana", role = "aut"))
+Description: Implements multivariate tests of uniformity on the hypercube and hypersphere, as well as tests of normality, spherical symmetry, elliptical symmetry and independence. The procedures are of Cramér-von Mises type and are based on a decomposition of the empirical process into asymptotically independent components.
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports:
-    Rcpp,
-    mvtnorm,
-    parallel
-LinkingTo:
-    Rcpp,
-    RcppArmadillo
-SystemRequirements: C++14
-Depends: 
-    R (>= 3.5)
-LazyData: true
+Imports: Rcpp, mvtnorm, future.apply
+Suggests: knitr, rmarkdown
+URL: https://github.com/emcabana/MuniCandS
+BugReports: https://github.com/emcabana/MuniCandS/issues
+VignetteBuilder: knitr
+Language: en-US
+LinkingTo: Rcpp, RcppArmadillo
+Depends: R (>= 3.5)
+

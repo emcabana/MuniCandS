@@ -1,4 +1,3 @@
-
 # MuniCandS
 
 **Multivariate Tests of Uniformity, Normality and Isotropy on C and S**
@@ -16,7 +15,6 @@ the following families:
 | `"US"` | Uniform on the hypersphere S^(*p*-1) |
 | `"N"`  | Normal in **R**^*p* |
 | `"I"`  | Isotropic (spherically symmetric) in **R**^*p* |
-| `"E"`  | Elliptic (elliptically symmetric) in **R**^*p* |
 | `"IN"` | Independent components in **R**^*p* |
 
 The tests are based on a decomposition of a *p*-parameter Brownian sheet as
@@ -40,12 +38,17 @@ X <- matrix(rnorm(200), nrow = 100, ncol = 2)
 # Test normality
 MuniCandS(X, type = "N")
 
+# Test with Lilliefors-type correction
+MUCS(X, type = "N")
 ```
 
 ## Functions
 
 - **`MuniCandS(X, type)`** — Applies the selected test to the data matrix `X`
   and returns two p-values (m-test and s-test).
+- **`MUCS(X, type)`** — Applies a Lilliefors-type correction using pre-computed
+  simulations stored in the package, interpolating in sample size when needed.
+  Returns corrected p-values for the m-test and s-test.
 
 ## Reference
 
