@@ -1,7 +1,7 @@
 Package: MuniCandS
 Type: Package
 Title: Multivariate Tests of Uniformity, Normality and Isotropy on C and S
-Version: 0.2.0
+Version: 0.1.0
 Author: Alejandra Cabana [aut, cre], Enrique M. Cabana [aut]
 Maintainer: Alejandra Cabana <AnaAlejandra.Cabana@uab.cat>
 Description: Implements tests of uniformity on the hypercube C_p = [0,1]^p and on the hypersphere S^p, and tests of normality and isotropy on R^p for p = 1, 2, .... The tests are of the Cramer-von Mises type, based on a decomposition of a p-parameter Brownian sheet as the sum of 2^p independent Gaussian processes.
