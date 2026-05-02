@@ -87,4 +87,17 @@ res <- MuniCandS(
 
 cache <- res$cache
 ```
+The cached Monte Carlo simulations can then be reused for another sample of the same dimension and test configuration:
+
+```{r}
+Z2 <- matrix(runif(200), ncol = 2)
+
+MuniCandS(
+  Z2,
+  type = "UC",
+  n_sim = 100,
+  n_mc = 100,
+  cache = cache
+)
+```
 
