@@ -15,10 +15,12 @@ the following families:
 | `"US"` | Uniform on the hypersphere S^(*p*-1) |
 | `"N"`  | Normal in **R**^*p* |
 | `"I"`  | Isotropic (spherically symmetric) in **R**^*p* |
+| `"E"`  | Elliptically symmetric in **R**^*p* |
 | `"IN"` | Independent components in **R**^*p* |
 
 The tests are based on a decomposition of a *p*-parameter Brownian sheet as
-the sum of 2^*p* independent Gaussian processes, and produce two p-values
+the sum of 2^*p* independent Gaussian processes, and the associated decomposition
+of the empirical process, and produce two p-values
 corresponding to the **m-test** and the **s-test**.
 
 ## Installation
@@ -33,13 +35,11 @@ library(MuniCandS)
 
 # Generate a sample from a multivariate normal distribution
 set.seed(42)
-X <- matrix(rnorm(200), nrow = 100, ncol = 2)
+X <- matrix(rnorm(200), nrow = 100, ncol = 3)
 
 # Test normality
 MuniCandS(X, type = "N")
 
-# Test with Lilliefors-type correction
-MUCS(X, type = "N")
 ```
 
 ## Functions
