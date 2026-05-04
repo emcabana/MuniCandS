@@ -1,6 +1,6 @@
 # MuniCandS
 
-**Multivariate Tests of Uniformity, Normality and Isotropy on C and S**
+**Multivariate Tests of Uniformity, Normality Spherical and Elliptical symmetry and Independence**
 
 ## Overview
 
