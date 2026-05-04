@@ -44,8 +44,9 @@ MuniCandS(X, type = "N")
 
 ## Schematic diagram of the computations
 
+```html
 <img src="https://drive.google.com/file/d/1FkXV26fPr5UTi8Mjvr-aXedizaT3DAk2/view?usp=sharing" align="center" height="20" />
-
+```
 
 
 ## Reference
