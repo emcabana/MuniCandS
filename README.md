@@ -44,7 +44,7 @@ MuniCandS(X, type = "N")
 
 ## Functions
 
-<img src="man/figures/diagram.png" align="right" height="139" />
+<img src="man/figures/diagrama.png" align="right" height="139" />
 
 
 ## Reference
