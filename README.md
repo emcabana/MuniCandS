@@ -44,7 +44,7 @@ MuniCandS(X, type = "N")
 
 ## Schematic diagram of the computations
 
-![Estructura del método](man/figures/diagrama.png)
+![Estructura del método](man/figures/diagram.png)
 
 
 ## Reference
