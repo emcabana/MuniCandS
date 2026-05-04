@@ -44,9 +44,8 @@ MuniCandS(X, type = "N")
 
 ## Functions
 
--knitr::opts_chunk$set(
-  fig.path = "man/figures/diagram"
-)
+<img src="man/figures/imagen.png" align="right" height="139" />
+
 
 ## Reference
 
