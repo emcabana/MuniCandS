@@ -135,8 +135,8 @@ Z2 <- matrix(runif(300), ncol = 3)
 res1 <- MuniCandS(
   Z1,
   type = "UC",
-  n_sim = 5000,
-  n_mc = 5000,
+  n_sim = 500,
+  n_mc = 500,
   return_cache = TRUE
 )
 
@@ -144,8 +144,8 @@ res1 <- MuniCandS(
 res2 <- MuniCandS(
   Z2,
   type = "UC",
-  n_sim = 5000,
-  n_mc = 5000,
+  n_sim = 500,
+  n_mc = 500,
   cache = res1$cache
 )
 ```
