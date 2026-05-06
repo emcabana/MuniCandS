@@ -75,8 +75,8 @@ Therefore, once these simulations have been generated, they can be reused for ot
 res <- MuniCandS(
   Z,
   type = "UC",
-  n_sim = 1000,
-  n_mc = 1000,
+  n_sim = 500,
+  n_mc = 500,
   return_cache = TRUE
 )
 ```
@@ -101,8 +101,8 @@ the Monte Carlo simulations that may later be reused.
 res2 <- MuniCandS(
   Z2,
   type = "UC",
-  n_sim = 1000,
-  n_mc = 1000,
+  n_sim = 500,
+  n_mc = 500,
   cache = res$cache
 )
 ```
