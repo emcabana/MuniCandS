@@ -123,6 +123,11 @@ The cache is reused only if the following quantities are identical in both calls
 
 The observed data matrix `Z` itself may change.
 
+# The use of parallel computation
+
+Parallelization is useful mainly when Monte Carlo simulations are generated from scratch.
+When cached simulations are reused, parallelization generally provides no benefit and may slightly increase runtime.
+
 # Typical use case
 
 ```r
@@ -138,6 +143,7 @@ res1 <- MuniCandS(
   n_sim = 500,
   n_mc = 500,
   return_cache = TRUE
+  use_parallel = TRUE
 )
 
 # Second call: simulations are reused
