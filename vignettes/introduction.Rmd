@@ -18,7 +18,8 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-`MuniCandS` implements EDF tests for multivariate distributions. Given an $n \times p$ data matrix (a sample of size $n$ in $R^p$)  it tests whether the underlying distribution belongs to one of the following families:
+`MuniCandS` implements EDF tests for multivariate distributions. Given an $n \times p$ data matrix (a sample of size $n$ in $R^p$)
+it tests whether the underlying distribution belongs to one of the following families:
 
 * uniform on the hypercube $[0,1]^p$,
 * uniform on the hypersphere $S^p$,
@@ -29,7 +30,8 @@ knitr::opts_chunk$set(
 
 The methodology for testing uniformity on the hypercube is based on a decomposition of finite signed measures into zero-marginal components, leading to a decomposition of the empirical process into asymptotically independent terms.
 
-The resulting procedures are of Cramér–von Mises type, but replace the quadratic norm of the empirical process by the collection of norms of its zero-marginal components.
+The resulting procedures are of Cramér–von Mises type, but replace the quadratic norm of the empirical process by the collection
+of norms of its zero-marginal components.
 
 Further theoretical details can be found in:
 
@@ -40,7 +42,8 @@ arXiv:2509.06134.
 
 
 The fact that whenever a null hypothesis implies a joint distribution that factorizes into independent continuous components after a suitable mapping, allows to test such hypotheses by reducing the problem to a uniformity test on the hypercube via componentwise probability integral transforms.
-Specifically, the package introduces new procedures derived from these principles for testing uniformity on the hypersphere $S^p$, as well as multivariate normality, spherical and elliptical symmetry, and independence in $R^p$.
+Specifically, the package introduces new procedures derived from these principles for testing uniformity on the hypersphere $S^p$,
+as well as multivariate normality, spherical and elliptical symmetry, and independence in $R^p$.
 
 
 
