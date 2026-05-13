@@ -21,12 +21,12 @@ knitr::opts_chunk$set(
 `MuniCandS` implements EDF tests for multivariate distributions. Given an $n \times p$ data matrix (a sample of size $n$ in $R^p$)
 it tests whether the underlying distribution belongs to one of the following families:
 
-* uniform on the hypercube $[0,1]^p$,
-* uniform on the hypersphere $S^p$,
-* normal in $R^p$,
-* spherical symmetric in $R^p$,
-* elliptical symmetric in $R^p$,
-* independent compónents in $R^p$.
+* uniform on the hypercube [0,1]^p,
+* uniform on the hypersphere S^p,
+* normal in R^p,
+* spherical symmetric in R^p,
+* elliptical symmetric in R^p,
+* independent compónents in R^p.
 
 The methodology for testing uniformity on the hypercube is based on a decomposition of finite signed measures into zero-marginal
 components, leading to a decomposition of the empirical process into asymptotically independent terms.
