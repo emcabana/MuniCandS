@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-`MuniCandS` implements EDF tests for multivariate distributions. Given an $n \times p$ data matrix (a sample of size $n$ in $R^p$)
+`MuniCandS` implements EDF tests for multivariate distributions. Given an $n \times p$ data matrix (a sample of size n in $R^p$)
 it tests whether the underlying distribution belongs to one of the following families:
 
 * uniform on the hypercube [0,1]^p,
