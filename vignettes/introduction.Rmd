@@ -50,7 +50,7 @@ $S^p$,as well as multivariate normality, spherical and elliptical symmetry, and 
 
 ## Schematic diagram of the computations
 
-![Estructura del método](man/figures/diagram.png)
+![Estructura del método](diagram.png)
 
 # Basic example
 
