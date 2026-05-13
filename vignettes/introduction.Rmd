@@ -42,9 +42,11 @@ Statistica, to appear,
 arXiv:2509.06134.
 
 
-The fact that whenever a null hypothesis implies a joint distribution that factorizes into independent continuous components after a suitable mapping, allows to test such hypotheses by reducing the problem to a uniformity test on the hypercube via componentwise probability integral transforms.
-Specifically, the package introduces new procedures derived from these principles for testing uniformity on the hypersphere $S^p$,
-as well as multivariate normality, spherical and elliptical symmetry, and independence in $R^p$.
+The fact that whenever a null hypothesis implies a joint distribution that factorizes into independent continuous components
+after a suitable mapping, allows to test such hypotheses by reducing the problem to a uniformity test on the hypercube via
+componentwise probability integral transforms.
+Specifically, the package introduces new procedures derived from these principles for testing uniformity on the hypersphere
+$S^p$,as well as multivariate normality, spherical and elliptical symmetry, and independence in $R^p$.
 
 
 
