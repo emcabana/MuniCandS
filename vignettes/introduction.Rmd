@@ -1,14 +1,15 @@
 ---
 
-title: "Introduction to MuniCandS"
+title: "Introduction"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Introduction to MuniCandS}
+  %\VignetteIndexEntry{Introduction}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
+library(MuniCandS)
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -17,57 +18,18 @@ knitr::opts_chunk$set(
 
 
 # Introduction
+The MuniCandS package provides a powerful framework for testing goodness-of-fit for multivariate distributions. Unlike traditional methods that rely on a single global statistic, MuniCandS uses a decomposition of the empirical process into asymptotically independent Gaussian components.
 
-`MuniCandS` implements EDF tests for multivariate distributions. Given an $n \times p$ data matrix (a sample of size n in $R^p$)
-it tests whether the underlying distribution belongs to one of the following families:
+This approach, based on the work of Cabaña & Cabaña (2025), allows for more nuanced testing (the m-test and s-test) across various distributional families.
 
-* uniform on the hypercube [0,1]^p,
-* uniform on the hypersphere S^p,
-* normal in R^p,
-* spherical symmetric in R^p,
-* elliptical symmetric in R^p,
-* independent compónents in R^p.
+# Methodology
+The methodology for testing uniformity on the hypercube is based on a decomposition of finite signed measures into zero-marginal components, leading to a decomposition of the empirical process into asymptotically independent terms.
 
-The methodology for testing uniformity on the hypercube is based on a decomposition of finite signed measures into zero-marginal
-components, leading to a decomposition of the empirical process into asymptotically independent terms.
+The resulting procedures are of Cramér–von Mises type, but replace the quadratic norm of the empirical process by the collection of squared norms of its zero-marginal components.
 
-The resulting procedures are of Cramér–von Mises type, but replace the quadratic norm of the empirical process by the collection
-of norms of its zero-marginal components.
+The fact that whenever a null hypothesis implies a joint distribution that factorizes into independent continuous components after a suitable mapping, allows to test such hypotheses by reducing the problem to a uniformity test on the hypercube via componentwise probability integral transforms.
 
-Further theoretical details can be found in:
-
-A. Cabaña and E. M. Cabaña (2025),
-*Brownian sheet and uniformity tests on the hypercube*,
-Statistica, to appear,
-arXiv:2509.06134.
-
-
-The fact that whenever a null hypothesis implies a joint distribution that factorizes into independent continuous components
-after a suitable mapping, allows to test such hypotheses by reducing the problem to a uniformity test on the hypercube via
-componentwise probability integral transforms.
-Specifically, the package introduces new procedures derived from these principles for testing uniformity on the hypersphere
-$S^p$,as well as multivariate normality, spherical and elliptical symmetry, and independence in $R^p$.
-
-## Schematic diagram of the computations
-
-![](diagram.png)
-
-# Basic example
-
-```{r}
-library(MuniCandS)
-
-set.seed(1)
-
-Z <- matrix(runif(200), ncol = 2)
-
-MuniCandS(
-  Z,
-  type = "UC",
-  n_sim = 100,
-  n_mc = 100
-)
-```
+Specifically, the package introduces new procedures derived from these principles to implement multivariate tests of:
 
 # Supported hypotheses
 
@@ -80,32 +42,68 @@ MuniCandS(
 | `"E"`  | Elliptical symmetry           |
 | `"IN"` | Independence                  |
 
-# Monte Carlo reuse
 
-The function supports optional caching of Monte Carlo simulations:
+# Quick Start: Testing Normality
 
-```{r}
-res <- MuniCandS(
-  Z,
-  type = "UC",
-  n_sim = 100,
-  n_mc = 100,
-  return_cache = TRUE
-)
-
-cache <- res$cache
-```
-The cached Monte Carlo simulations can then be reused for another sample of the same dimension and test configuration:
+Let's test if a 3-dimensional sample comes from a standard multivariate normal distribution.
 
 ```{r}
-Z2 <- matrix(runif(200), ncol = 2)
+set.seed(42)
+# Generate a sample under H0
+n <- 100
+p <- 3
+X <- matrix(rnorm(n * p), nrow = n, ncol = p)
 
-MuniCandS(
-  Z2,
-  type = "UC",
-  n_sim = 100,
-  n_mc = 100,
-  cache = cache
-)
+# Run the test
+results <- MuniCandS(X, type = "N", n_sim = 100, n_mc = 100)
+
+# Display p-values
+print(results$result)
 ```
+
+# Efficient Workflow: Using the Cache
+
+ The most computationally intensive part of MuniCandS is the Monte Carlo simulation of the null distributions. These depend on the dimensions (n, p) and parameters, but not on the data itself.
+
+### Step 1: Generate the Cache
+
+ ```{r cache_gen}
+ res_first <- MuniCandS(
+   X, 
+   type = "N", 
+   n_sim = 100, 
+   n_mc = 100, 
+   return_cache = TRUE
+ )
+ ```
+
+### Step 2: Reuse for New Data
+
+ ```{r cache_reuse}
+ X_new <- matrix(rnorm(300), ncol = 3)
+
+ res_second <- MuniCandS(
+   X_new, 
+   type = "N", 
+   n_sim = 100,
+   n_mc = 100,
+   cache = res_first$cache
+ )
+ ```
+
+# Interpreting Results
+
+ The MuniCandS function returns two main p-values:
+
+*   m-test: Based on the minimum of the components' p-values.
+*   s-test: Based on a sum of functions of the p-values.
+
+ A small p-value (typically < 0.05) in either test suggests evidence against the null hypothesis.
+
+# Mathematical Background
+
+ For more details, please refer to:
+
+ Cabaña, A. and Cabaña, E. M. (2025). *Brownian sheet and uniformity tests on the hypercube*. Statistica (to appear). arXiv:2509.06134.
+
 
