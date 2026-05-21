@@ -5,29 +5,6 @@
 #include <cmath>
 using namespace Rcpp;
 
-// [[Rcpp::export]]
-double calc_est(NumericMatrix X, IntegerVector H) {
-  int n = X.nrow();
-  double T = 0.0;
-  
-  for (int h = 0; h < n; ++h) {
-    for (int i = 0; i < n; ++i) {
-      double prod = 1.0;
-      for (int j = 0; j < H.size(); ++j) {
-        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)
-        double val_h = X(h, col);
-        double val_i = X(i, col);
-        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;
-        prod *= term;
-      }
-      T += prod;
-    }
-  }
-  
-  return T / n;
-}
-
-
 
 // [[Rcpp::export]]
 double calc_est_arma(const arma::mat& X, const arma::uvec& H) {
@@ -70,8 +47,8 @@ NumericVector S2Cpi(NumericVector x) {
 
 
 // -------------------------------------------------------------
-// intlin: interpolación lineal escalar (equivalente al intlin de tu R)
-// -------------------------------------------------------------
+// intlin: interpolación lineal escalar
+// -----------------------------------------------------------
  // [[Rcpp::export]]
 double intlin(double x, NumericVector X, NumericVector Y) {
   int n = X.size();
@@ -97,10 +74,10 @@ double intlin(double x, NumericVector X, NumericVector Y) {
   return ((x2 - x) * y1 + (x - x1) * y2) / (x2 - x1);
 }
 
-// -----------------------------------------------------------------------------
-// ajus: función principal (incluye la lógica de 'preaj' integrada)
-// devuelve pchisq(x, df = 1) según tu versión corregida
-// -----------------------------------------------------------------------------
+//--------------------------------------------------------------
+// ajus: función principal 
+// devuelve pchisq(x, df = 1)
+//--------------------------------------------------------------
  // [[Rcpp::export]]
 double ajus(double y, NumericVector Y) {
   int Len = Y.size();

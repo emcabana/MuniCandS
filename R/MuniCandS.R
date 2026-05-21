@@ -295,11 +295,4 @@ evlin=function(u,f){ff=c(0,sort(f),1)
   return(U)
 }
 
-Cpi2S=function(Phi){
-	Phi=c(Phi,0)
-	Z=cos(Phi[1])
-	for(j in 2:(length(Phi)))Z=c(Z,cos(Phi[j])*prod(sin(Phi[1:(j-1)])))
-	return(Z)
-}
-
 

@@ -11,18 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// calc_est
-double calc_est(NumericMatrix X, IntegerVector H);
-RcppExport SEXP _MuniCandS_calc_est(SEXP XSEXP, SEXP HSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type H(HSEXP);
-    rcpp_result_gen = Rcpp::wrap(calc_est(X, H));
-    return rcpp_result_gen;
-END_RCPP
-}
 // calc_est_arma
 double calc_est_arma(const arma::mat& X, const arma::uvec& H);
 RcppExport SEXP _MuniCandS_calc_est_arma(SEXP XSEXP, SEXP HSEXP) {
@@ -84,7 +72,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_MuniCandS_calc_est", (DL_FUNC) &_MuniCandS_calc_est, 2},
     {"_MuniCandS_calc_est_arma", (DL_FUNC) &_MuniCandS_calc_est_arma, 2},
     {"_MuniCandS_S2Cpi", (DL_FUNC) &_MuniCandS_S2Cpi, 1},
     {"_MuniCandS_intlin", (DL_FUNC) &_MuniCandS_intlin, 3},
