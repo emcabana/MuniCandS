@@ -148,8 +148,23 @@ MuniCandS <- function(
     BH
   )
 
+    if(type %in% c("UC","IN")){
   pvmys0 <- pvals2pv(pvals, H_list)
   pvmys  <- pvPV2mys(pvmys0, PV)
+  } else {
+  	 PVO <- do.call(rbind,
+      lapply_fun(1:n_ort, function(i) {
+        pvals2pv(
+          bHBH2pvals(
+            X2bH(Z2X(ort2Z(Z), type), H_list),
+            BH
+          ),
+          H_list
+        )
+      })
+    )
+pvmys <- pvPV2mys(colMeans(PVO),PV)
+  }
 
   names(pvmys) <- c("m-test", "s-test")
 
