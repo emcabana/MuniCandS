@@ -46,6 +46,7 @@
 #' @param hmax Integer. Maximum subset size to include (use \code{Inf} for no upper bound).
 #' @param n_sim Integer. Number of Monte Carlo repetitions for the first simulation.
 #' @param n_mc Integer. Number of Monte Carlo repetitions for the second simulation.
+#' @param n_ort Integer. Number of orthogonal transformations to get invariance under isometries of the sphere.
 #' @param use_parallel Logical. If \code{TRUE}, parallelization is used.
 #' @param cache Optional list containing precomputed Monte Carlo simulations.
 #' @param return_cache Logical. If TRUE, the Monte Carlo simulations are returned for reuse.
