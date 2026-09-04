@@ -79,7 +79,6 @@ double intlin(double x, NumericVector X, NumericVector Y) {
 // ajus: versión con parámetro entero h
 // devuelve el valor pv definido en tu fórmula
 // -----------------------------------------------------------------------------
-
 // [[Rcpp::export]]
 double ajus(double y, Rcpp::NumericVector Y, int h) {
   int R = Y.size();

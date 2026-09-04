@@ -13,8 +13,8 @@ intlin <- function(x, X, Y) {
     .Call(`_MuniCandS_intlin`, x, X, Y)
 }
 
-ajus <- function(y, Y) {
-    .Call(`_MuniCandS_ajus`, y, Y)
+ajus <- function(y, Y, h) {
+    .Call(`_MuniCandS_ajus`, y, Y, h)
 }
 
 Cpi2C <- function(phi) {

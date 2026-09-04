@@ -48,14 +48,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // ajus
-double ajus(double y, NumericVector Y);
-RcppExport SEXP _MuniCandS_ajus(SEXP ySEXP, SEXP YSEXP) {
+double ajus(double y, Rcpp::NumericVector Y, int h);
+RcppExport SEXP _MuniCandS_ajus(SEXP ySEXP, SEXP YSEXP, SEXP hSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type y(ySEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type Y(YSEXP);
-    rcpp_result_gen = Rcpp::wrap(ajus(y, Y));
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type h(hSEXP);
+    rcpp_result_gen = Rcpp::wrap(ajus(y, Y, h));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -75,7 +76,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MuniCandS_calc_est_arma", (DL_FUNC) &_MuniCandS_calc_est_arma, 2},
     {"_MuniCandS_S2Cpi", (DL_FUNC) &_MuniCandS_S2Cpi, 1},
     {"_MuniCandS_intlin", (DL_FUNC) &_MuniCandS_intlin, 3},
-    {"_MuniCandS_ajus", (DL_FUNC) &_MuniCandS_ajus, 2},
+    {"_MuniCandS_ajus", (DL_FUNC) &_MuniCandS_ajus, 3},
     {"_MuniCandS_Cpi2C", (DL_FUNC) &_MuniCandS_Cpi2C, 1},
     {NULL, NULL, 0}
 };
