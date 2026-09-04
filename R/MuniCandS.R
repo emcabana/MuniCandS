@@ -135,7 +135,7 @@ MuniCandS <- function(
         pvals2pv(
           bHBH2pvals(
             X2bH(Z2X(G2Z(n, p, type), type), H_list),
-            BH
+            BH, H_list
           ),
           H_list
         )
@@ -285,10 +285,23 @@ pvPV2mys=function(pv,PV){
 ### FUNCIONES AUXILIARES 
 ##########################################
 
-evlin=function(u,f){ff=c(0,sort(f),1)
-	if (u==1) res <- 1 else{sf=max(which(ff<=u))
-	res <- ((sf+(u-ff[sf])/(ff[sf+1]-ff[sf])-1)/(length(f)+1))}
-	return(res)
+evlin <- function(u, f) {
+  ff <- c(0, sort(f), 1)
+  
+  # proteger contra NA
+  if (is.na(u)) return(NA_real_)
+  
+  if (u == 1) {
+    res <- 1
+  } else {
+    sf <- which(ff <= u)
+    if (length(sf) == 0) return(NA_real_)  # protección extra
+    sf <- max(sf)
+    denom <- ff[sf+1] - ff[sf]
+    if (denom == 0) return(NA_real_)       # evitar división por cero
+    res <- ((sf + (u - ff[sf]) / denom - 1) / (length(f) + 1))
+  }
+  return(res)
 }
 
    # Generation of the subsets H of J={0,1,...,p}
