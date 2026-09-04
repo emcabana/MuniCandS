@@ -146,7 +146,7 @@ MuniCandS <- function(
   # --- datos observados ---
   pvals <- bHBH2pvals(
     X2bH(Z2X(Z, type), H_list),
-    BH
+    BH, H_list
   )
 
     if(type %in% c("UC","IN","N")){
@@ -158,7 +158,7 @@ MuniCandS <- function(
         pvals2pv(
           bHBH2pvals(
             X2bH(Z2X(ort2Z(Z), type), H_list),
-            BH
+            BH, H_list
           ),
           H_list
         )
@@ -258,10 +258,10 @@ X2bH=function(X,H_list){
 	return(bH)
 }
 
-bHBH2pvals=function(bH,BH){
+bHBH2pvals=function(bH,BH,H_list){
   resu <- numeric(ncol(BH))
   for (i in seq_len(ncol(BH))) {
-    resu[i] <- ajus(bH[i], sort(BH[, i]))
+    resu[i] <- ajus(bH[i], sort(BH[, i]), length(H_list[[i]]))
   }
   resu[resu < 0] <- 0
   return(resu)
