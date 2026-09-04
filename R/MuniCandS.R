@@ -149,7 +149,7 @@ MuniCandS <- function(
     BH
   )
 
-    if(type %in% c("UC","IN")){
+    if(type %in% c("UC","IN","N")){
   pvmys0 <- pvals2pv(pvals, H_list)
   pvmys  <- pvPV2mys(pvmys0, PV)
   } else {
