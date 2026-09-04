@@ -74,11 +74,7 @@ double intlin(double x, NumericVector X, NumericVector Y) {
   return ((x2 - x) * y1 + (x - x1) * y2) / (x2 - x1);
 }
 
-//--------------------------------------------------------------
-// ajus: función principal 
-// devuelve pchisq(x, df = 1)
-//--------------------------------------------------------------
- // [[Rcpp::export]]
+
 // -----------------------------------------------------------------------------
 // ajus: versión con parámetro entero h
 // devuelve el valor pv definido en tu fórmula
