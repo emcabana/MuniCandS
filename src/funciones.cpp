@@ -79,104 +79,47 @@ double intlin(double x, NumericVector X, NumericVector Y) {
 // devuelve pchisq(x, df = 1)
 //--------------------------------------------------------------
  // [[Rcpp::export]]
-double ajus(double y, NumericVector Y) {
-  int Len = Y.size();
-  if (Len < 2) return NA_REAL;
+// -----------------------------------------------------------------------------
+// ajus: versión con parámetro entero h
+// devuelve el valor pv definido en tu fórmula
+// -----------------------------------------------------------------------------
 
-  // indi = (1:Len)/(Len+1)
-  NumericVector indi(Len);
-  for (int i = 0; i < Len; ++i) indi[i] = (i + 1.0) / (Len + 1.0);
+// [[Rcpp::export]]
+double ajus(double y, Rcpp::NumericVector Y, int h) {
+  int R = Y.size();
+  if (R < 1) return NA_REAL;
 
-  // X = qchisq(indi, df = 1)
-  NumericVector X(Len);
-  for (int i = 0; i < Len; ++i) X[i] = R::qchisq(indi[i], 1.0, /*lower_tail*/1, /*log_p*/0);
+  // Construir YS = (0, sort(Y), Inf)
+  Rcpp::NumericVector YS(R + 2);
+  YS[0] = 0.0;
+  std::vector<double> Ys_sorted(Y.begin(), Y.end());
+  std::sort(Ys_sorted.begin(), Ys_sorted.end());
+  for (int i = 0; i < R; ++i) {
+    YS[i + 1] = Ys_sorted[i];
+  }
+  YS[R + 1] = R_PosInf;
 
-  // L1 = round(.3*Len), L2 = round(.95*Len)
-  int L1 = std::lround(0.3 * Len);
-  int L2 = std::lround(0.95 * Len);
-
-  // acotar entre 1 y Len (R es 1-based)
-  if (L1 < 1) L1 = 1;
-  if (L2 < 1) L2 = 1;
-  if (L1 > Len) L1 = Len;
-  if (L2 > Len) L2 = Len;
-  if (L2 < L1) L2 = L1;
-
-  // convertir a 0-based
-  int start = L1 - 1;
-  int end = L2 - 1;
-
-  // XM = X[L1:L2], YM = Y[L1:L2]
-  int m = end - start + 1;
-  NumericVector XM(m), YM(m);
-  for (int i = 0; i < m; ++i) {
-    XM[i] = X[start + i];
-    YM[i] = Y[start + i];
+  // r = max índice tal que YS[r] <= y
+  int r = 0;
+  for (int i = 0; i < R + 2; ++i) {
+    if (YS[i] <= y) r = i;
   }
 
-  // medias MX, MY
-double MX = std::accumulate(XM.begin(), XM.end(), 0.0) / XM.size();
-double MY = std::accumulate(YM.begin(), YM.end(), 0.0) / YM.size();
-  // bb = sum((XM-MX)*(YM-MY))/sum((XM-MX)^2)
-  double num = 0.0, den = 0.0;
-  for (int i = 0; i < m; ++i) {
-    double dx = XM[i] - MX;
-    double dy = YM[i] - MY;
-    num += dx * dy;
-    den += dx * dx;
-  }
-  double bb = (den == 0.0) ? 0.0 : num / den;
-  double aa = MY - bb * MX;
+  // parámetros de la gamma
+  double a  = std::pow(5.0, h) / std::pow(2.0, h + 1);
+  double la = std::pow(15.0, h) / 2.0;
 
-  // Construir YY = Y ajustada (misma longitud que Y)
-  NumericVector YY = clone(Y);
+  // valores de distribución gamma
+  double p1 = R::pgamma(YS[r],   a, 1.0/la, /*lower_tail*/1, /*log_p*/0);
+  double p2 = R::pgamma(YS[r+1], a, 1.0/la, /*lower_tail*/1, /*log_p*/0);
+  double pp = R::pgamma(y,       a, 1.0/la, /*lower_tail*/1, /*log_p*/0);
 
-// límites del bloque de mezcla
-double XM_first = XM[0];                  // primer elemento
-double XM_last  = XM[XM.size() - 1];      // último elemento
-double denom_mix = XM_last - XM_first;
+  // cálculo del p‑valor
+  double pv = (R - r + (p2 - pp) / (p2 - p1)) / (R + 1);
 
-  for (int j = 0; j < Len; ++j) {
-    double Xj = X[j];
-    if (Xj < XM_first) {
-      YY[j] = Y[j];
-    } else if (Xj > XM_last) {
-      YY[j] = aa + bb * Xj;
-    } else {
-      // mezcla entre Y[j] y aa+bb*Xj
-      double v1 = Y[j];
-      double v2 = aa + bb * Xj;
-      if (denom_mix == 0.0) {
-        // fallback (muy raro: XM_first == XM_last)
-        YY[j] = 0.5 * (v1 + v2);
-      } else {
-        double w1 = (XM_last - Xj);
-        double w2 = (Xj - XM_first);
-        YY[j] = (w1 * v1 + w2 * v2) / denom_mix;
-      }
-    }
-  }
-
-  // ahora determinar x: si y > YY[Len]  o bien intlin
-  double YY_last = YY[Len - 1];
-  double xval;
-  if (y > YY_last) {
-    if (bb == 0.0) {
-      // fallback si bb == 0: evitamos division por 0
-      xval = y - aa;
-    } else {
-      xval = (y - aa) / bb;
-    }
-  } else {
-    xval = intlin(y, YY, X);
-  }
-
-  // devolver pchisq(x, df = 1)
-  double pval = R::pchisq(xval, 1.0, /*lower_tail*/1, /*log_p*/0);
-  return 1.0-pval;
-  
-//  return xval;
+  return pv;
 }
+
 
 // [[Rcpp::export]]
 NumericVector Cpi2C(NumericVector phi) {
