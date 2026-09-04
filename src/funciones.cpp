@@ -105,12 +105,14 @@ double ajus(double y, Rcpp::NumericVector Y, int h) {
   double la = std::pow(15.0, h) / 2.0;
 
   // valores de distribución gamma
-  double p1 = R::pgamma(YS[r],   a, 1.0/la, /*lower_tail*/1, /*log_p*/0);
-  double p2 = R::pgamma(YS[r+1], a, 1.0/la, /*lower_tail*/1, /*log_p*/0);
-  double pp = R::pgamma(y,       a, 1.0/la, /*lower_tail*/1, /*log_p*/0);
+double q1 = R::pgamma(YS[r],   a, 1.0/la, 0, 0);
+double q2 = R::pgamma(YS[r+1], a, 1.0/la, 0, 0);
+double qy = R::pgamma(y,       a, 1.0/la, 0, 0);
 
-  // cálculo del p‑valor
-  double pv = (R - r + (p2 - pp) / (p2 - p1)) / (R + 1);
+// cálculo del p‑valor
+double pv = (R - r + (qy - q2) / (q1 - q2)) / (R + 1);
+
+
 
   return pv;
 }
