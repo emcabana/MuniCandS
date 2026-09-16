@@ -66,88 +66,81 @@
 #' @examples
 #' \donttest{
 #' Z <- matrix(runif(150), ncol = 3)
-#' MuniCandS(Z, type = "UC", n_sim=100, n_mc = 100, n_ort = 100)
+#' MuniCandS(Z, type = "UC", n_sim=100, n_mc = 100)
 #' }
-#' @keywords internal
-#' @importFrom Rcpp sourceCpp
-#' @importFrom stats rnorm
-#' @useDynLib MuniCandS, .registration = TRUE
 ##########################################
 ### FUNCION PRINCIPAL 
 ##########################################
 #' @export
-MuniCandS<-function(
-Z,type,
-hmin=1,hmax=Inf,
-n_sim=1000,
-n_mc=1000,
-n_ort=1000,
-use_parallel=FALSE,
-cache=NULL,
-return_cache=FALSE,
-full=FALSE,
-graph=FALSE
-){
+MuniCandS <- function(
+  Z, type,
+  hmin = 1, hmax = Inf,
+  n_sim = 1000,
+  n_mc = 1000,
+  use_parallel = FALSE,
+  cache = NULL,
+  return_cache = FALSE,
+  full = FALSE,
+  graph = FALSE
+) {
 
-stopifnot(is.matrix(Z))
-stopifnot(type %in% c("UC","US","N","I","E","IN"))
+  stopifnot(is.matrix(Z))
+  stopifnot(type %in% c("UC","US","N","I","E","IN"))
 
 
-n<-nrow(Z)
-p<-ncol(Z)
-px<-if(type=="US")p-1 else p
+  n <- nrow(Z)
+  p <- ncol(Z)
+  px <- if (type == "US") p - 1 else p
 
-if(type=='IN')hmin<-max(2,hmin)
-H_list<-genlist(hmin,hmax,px)
-if((type %in% c("I","E"))&&(hmin==1))H_list<-H_list[-p]
+  H_list <- genlist(hmin, hmax, px)
 
-#---validarcache---
-valid_cache<-FALSE
-if(!is.null(cache)){
-if(!is.null(cache$params)){
-pars<-cache$params
-valid_cache<-all.equal(
-list(n=n,p=p,hmin=hmin,hmax=hmax,type=type,n_sim=n_sim,n_mc=n_mc,n_ort=n_ort),
-pars
-)==TRUE
-}
-}
+  # --- validar cache ---
+  valid_cache <- FALSE
+  if (!is.null(cache)) {
+    if (!is.null(cache$params)) {
+      pars <- cache$params
+      valid_cache <- all.equal(
+        list(n=n, p=p, hmin=hmin, hmax=hmax, type=type, n_sim=n_sim, n_mc=n_mc),
+        pars
+      ) == TRUE
+    }
+  }
 
-#---backend---
-lapply_fun<-lapply
-if(use_parallel){
-lapply_fun<-function(X,FUN){
-future.apply::future_lapply(X,FUN,future.seed=TRUE)
-}
-}
+  # --- backend ---
+  lapply_fun <- lapply
+  if (use_parallel) {
+    lapply_fun <- function(X, FUN) {
+      future.apply::future_lapply(X, FUN, future.seed = TRUE)
+    }
+  }
 
-#---BH---
-if(valid_cache && !is.null(cache$BH)){
-BH<-cache$BH
-}else{
-BH<-do.call(rbind,
-lapply_fun(1:n_sim,function(i){
-X2bH(Z2X(G2Z(n,p,type),type),H_list)
-})
-)
-}
+  # --- BH ---
+  if (valid_cache && !is.null(cache$BH)) {
+    BH <- cache$BH
+  } else {
+    BH <- do.call(rbind,
+      lapply_fun(1:n_sim, function(i) {
+        X2bH(Z2X(G2Z(n, p, type), type), H_list)
+      })
+    )
+  }
 
-#---PV---
-if(valid_cache && !is.null(cache$PV)){
-PV<-cache$PV
-}else{
-PV<-do.call(rbind,
-lapply_fun(1:n_mc,function(i){
-pvals2pv(
-bHBH2pvals(
-X2bH(Z2X(G2Z(n,p,type),type),H_list),
-BH,H_list
-),
-H_list
-)
-})
-)
-}
+  # --- PV ---
+  if (valid_cache && !is.null(cache$PV)) {
+    PV <- cache$PV
+  } else {
+    PV <- do.call(rbind,
+      lapply_fun(1:n_mc, function(i) {
+        pvals2pv(
+          bHBH2pvals(
+            X2bH(Z2X(G2Z(n, p, type), type), H_list),
+            BH, H_list
+          ),
+          H_list
+        )
+      })
+    )
+  }
 
   # --- datos observados ---
 
@@ -161,112 +154,56 @@ H_list
   pvmys  <- pvPV2mys(pvmys0, PV)
 
   names(pvmys) <- c("m-test", "s-test")
-  
-
 
   if (graph && (type %in% c("UC","IN"))) {
     plot(pvals, ylim = c(0, 1), pch = 15)
     print(H_list)
   }
 
-new_cache<-list(
-BH=BH,
-PV=PV,
-params=list(
-n=n,p=p,
-hmin=hmin,hmax=hmax,
-type=type,
-n_sim=n_sim,n_mc=n_mc,n_ort=n_ort
-)
-)
+  new_cache <- list(
+    BH = BH,
+    PV = PV,
+    params = list(
+      n = n, p = p,
+      hmin = hmin, hmax = hmax,
+      type = type,
+      n_sim = n_sim, n_mc = n_mc
+    )
+  )
 
-if(return_cache){
-return(list(result=pvmys,cache=new_cache))
-}
+  if (return_cache) {
+    return(list(result = pvmys, cache = new_cache))
+  }
 
-if(!full)return(list(pvals=pvmys))
-return(list(pvals.all=pvmys0,pvals=pvmys))
+  if (!full) return(list(pvals=pvmys))
+  return(list(pvals.all=pvmys0, pvals=pvmys))
 }
 
 ##########################################
-###FUNCIONESBASICAS
+### FUNCIONES BASICAS 
 ##########################################
 
 G2Z=function(n,p,type){
-	if(type %in% c("E","N")){
-	ZS<-matrix(stats::rnorm(n*p),n,p)
-}
-if(type %in% c("UC","IN")){
-ZS<-matrix(runif(n*p),n,p)
-}
-if(type %in% c("US","I")){
-	ZS=matrix(stats::rnorm(n*p),n,p)
-	if(type=="US")ZS=ZS/sqrt(rowSums(ZS^2))
-}
+	 if(type %in% c("E","N")){
+  	ZS <- matrix(stats::rnorm(n*p),n,p)
+  }
+  if(type %in% c("UC","IN")){
+    ZS <- matrix(runif(n * p), n, p)
+    }
+  if(type%in% c("US","I")){
+  	 ZS=matrix(stats::rnorm(n*p),n,p)
+  	 if(type=="US")ZS=ZS/sqrt(rowSums(ZS^2))
+  }
 return(ZS)
 }
 
-<<<<<<< HEAD
-	ort2Z=function(Z){
-	p<-ncol(Z)
-	A<-matrix(rnorm(p^2),p,p)
-	QR<-qr(A)
-	Q<-qr.Q(QR)
-	R<-qr.R(QR)
-	sd<-sign(diag(R))
-	QU<-Q%*%diag(sd)
-	return(Z%*%t(QU))
-	}
-	
-=======
 
->>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 Z2X=function(Z,type){
-n<-nrow(Z)
-p<-ncol(Z)
-X<-Z
-variance<-NA
-if(type=="US"){
-X<-S2C(Z)#matrix(NA,n,p-1)
-#for(i in 1:n)X[i,]<-S2C(Z[i,])
-}
-if(type=="E"){
-ZC<-scale(Z,center=TRUE,scale=FALSE)
-variance<-crossprod(ZC)/n
-eig<-eigen(variance)
-Z<-ZC%%eig$vectors%%diag(1/sqrt(eig$values))%*%t(eig$vectors)/sqrt(n)
-}
-if(type %in% c("I","E")){
-rho<-sqrt(rowSums(Z^2))
-Z0<-Z/rho
-X<-matrix(NA,n,p-1)
-for(i in 1:n)X[i,]<-S2C(Z0[i,])
-X<-cbind(X,rank(rho)/(n+1))
-}
-if(type=="N"){
-ZC<-scale(Z,center=TRUE,scale=FALSE)
-variance<-crossprod(ZC)/n
-eig<-eigen(variance)
-X<-pnorm(ZC%%eig$vectors%%diag(1/sqrt(eig$values))%*%t(eig$vectors))
-}
-if(type=="IN"){
-for(j in 1:p)X[,j]=rank(X[,j])/(n+1)
-}
-return(X)
-}
+	  n <- nrow(Z)
+  p <- ncol(Z)
+  X <- Z
+  variance <- NA
 
-<<<<<<< HEAD
-Z2X=function(Z,type){
-	n<-nrow(Z)
-p<-ncol(Z)
-X<-Z
-variance<-NA
-
-if(type=="US"){
-X<-S2C(Z)#matrix(NA,n,p-1)
-#for(i in 1:n)X[i,]<-S2C(Z[i,])
-}
-=======
   if (type == "US") {
   	variance <- crossprod(Z) / n
     eig <- eigen(variance)
@@ -280,78 +217,52 @@ X<-S2C(Z)#matrix(NA,n,p-1)
     eig <- eigen(variance)
     Z <- ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors)
   }
->>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 
-if(type=="E"){
-ZC<-scale(Z,center=TRUE,scale=FALSE)
-variance<-crossprod(ZC)/n
-eig<-eigen(variance)
-Z<-ZC%*%eig$vectors%*%diag(1/sqrt(eig$values))%*%t(eig$vectors)/sqrt(n)
-}
+  if (type %in% c("I","E")) {
+    rho <- sqrt(rowSums(Z^2))
+    Z0 <- Z / rho
+    X <- matrix(NA, n, p-1)
+    for (i in 1:n) X[i, ] <- S2C(Z0[i, ])
+    X <- cbind(X, rank(rho) / (n + 1))
+  }
 
-<<<<<<< HEAD
-if(type %in% c("I","E")){
-rho<-sqrt(rowSums(Z^2))
-Z0<-Z/rho
-X<-matrix(NA,n,p-1)
-for(i in 1:n)X[i,]<-S2C(Z0[i,])
-X<-cbind(X,rank(rho)/(n+1))
-}
-=======
   if (type == "N") {
     ZC <- scale(Z, center = TRUE, scale = FALSE)
     variance <- crossprod(ZC) / n
     eig <- eigen(variance)
     X <- pnorm(ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors))
   }
->>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 
-if(type=="N"){
-ZC<-scale(Z,center=TRUE,scale=FALSE)
-variance<-crossprod(ZC)/n
-eig <- eigen(variance)
-X <- pnorm(ZC%*%eig$vectors%*%diag(1/sqrt(eig$values))%*%t(eig$vectors))
-}
+ if (type == 'IN') {
+  	for(j in 1:p) X[,j]=rank(X[,j])/(n+1)
+  }
 
-if(type=="IN"){
-	for(j in 1:p)X[,j]=rank(X[,j])/(n+1)
-}
-
-return(X)
+  return(X)
 }
 
 X2bH=function(X,H_list){
-	X<-as.matrix(X)
-	bH<-sapply(H_list,function(H)calc_est_arma(X,as.integer(H)-1))
-	#Armadillousa0-based
+	X <- as.matrix(X)
+	bH <- sapply(H_list, function(H) calc_est_arma(X, as.integer(H) - 1))
+	# Armadillo usa 0-based
 	return(bH)
 }
 
 bHBH2pvals=function(bH,BH,H_list){
-<<<<<<< HEAD
-resu<-numeric(ncol(BH))
-for(i in seq_len(ncol(BH))){
-resu[i]<-ajus(bH[i],sort(BH[,i]),length(H_list[[i]]))
-}
-resu[resu<0]<-0
-return(resu)
-=======
   resu <- numeric(ncol(BH))
   for (i in seq_len(ncol(BH))) {
     resu[i] <- ajus(bH[i], sort(BH[, i]),length(H_list[[i]]))
   }
   resu[resu < 0] <- 0
   return(resu)
->>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 }
 
 pvals2pv=function(pvals,H_list){
 	pmin=min(pvals)
-	suma=sum(qchisq(1-pvals,df=1))
-
-	m_p_value<-1-(1-pmin)^length(H_list)
-	s_p_value<-1-pchisq(suma,df=length(H_list))
-	return(c(m_p_value,s_p_value))
+	suma=sum(qchisq(1 - pvals, df = 1))
+  
+	m_p_value <- 1 - (1 - pmin)^length(H_list)
+	s_p_value <- 1 - pchisq(suma, df = length(H_list))
+	return(c(m_p_value, s_p_value))
 }
 
 pvPV2mys=function(pv,PV){
@@ -360,56 +271,34 @@ pvPV2mys=function(pv,PV){
 }
 
 ##########################################
-###FUNCIONESAUXILIARES
+### FUNCIONES AUXILIARES 
 ##########################################
 
-<<<<<<< HEAD
-evlin<-function(u,f){
-ff<-c(0,sort(f),1)
-
-#protegercontraNA
-if(is.na(u))return(NA_real_)
-
-if(u==1){
-res<-1
-}else{
-sf<-which(ff<=u)
-if(length(sf)==0)return(NA_real_)#protecciónextra
-sf<-max(sf)
-denom<-ff[sf+1]-ff[sf]
-if(denom==0)return(NA_real_)#evitardivisiónporcero
-res<-((sf+(u-ff[sf])/denom-1)/(length(f)+1))
-}
-return(res)
-=======
 evlin=function(u,f){ff=c(0,sort(f),1)
 	if (u==1) res <- 1 else{sf=max(which(ff<=u))
 	res <- ((sf+(u-ff[sf])/(ff[sf+1]-ff[sf])-1)/(length(f)+1))}
 	return(res)
->>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 }
 
-#GenerationofthesubsetsHofJ={0,1,...,p}
-genlist=function(hmin,hmax,p){
-H_list<-list()
-for(h in max(1,hmin):min(hmax,p)){
-H_list<-c(H_list,combn(p,h,simplify=FALSE))
-}
-return(H_list)
+   # Generation of the subsets H of J={0,1,...,p}
+  genlist=function(hmin,hmax,p){
+  H_list <- list()
+  for (h in max(1,hmin):min(hmax, p)) {
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))
+  }
+  return(H_list)
 }
 
-S2C<-function(Z){
-if(is.matrix(Z)){
-n<-nrow(Z)
-U<-matrix(NA,n,ncol(Z)-1)
-for(i in 1:n)U[i,]<-Cpi2C(S2Cpi(Z[i,]))
-}else{
-U<-Cpi2C(S2Cpi(Z))
+ S2C <- function(Z) {
+  if (is.matrix(Z)) {
+    n <- nrow(Z)
+    U <- matrix(NA, n, ncol(Z)-1)
+    for (i in 1:n) U[i, ] <- Cpi2C(S2Cpi(Z[i, ]))
+  } else {
+    U <- Cpi2C(S2Cpi(Z))
+  }
+  return(U)
 }
-return(U)
-}
-<<<<<<< HEAD
-=======
 
 Cpi2S=function(Phi){
 	Phi=c(Phi,0)
@@ -419,4 +308,3 @@ Cpi2S=function(Phi){
 }
 
 
->>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
