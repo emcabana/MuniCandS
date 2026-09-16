@@ -20,6 +20,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Alejandra Cabana \email{AnaAlejandra.Cabana@uab.cat}
   \item Enrique M. Cabana
 }
 

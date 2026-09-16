@@ -1,13 +1,12 @@
 Package: MuniCandS
 Type: Package
 Title: Multivariate Tests of Uniformity, Normality, Symmetry and Independence
-Version: 0.2.0
+Version: 0.2.1
 Authors@R: c(person("Alejandra", "Cabana", email = "AnaAlejandra.Cabana@uab.cat", role = c("aut", "cre")), person("Enrique M.", "Cabana", role = "aut"))
 Description: Implements multivariate tests of uniformity on the hypercube and hypersphere, as well as tests of normality, spherical symmetry, elliptical symmetry and independence. The procedures are of Cramér-von Mises type and are based on a decomposition of the empirical process into asymptotically independent components.
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports: Rcpp, mvtnorm, future.apply
 Suggests: knitr, rmarkdown
 URL: https://github.com/emcabana/MuniCandS
@@ -16,4 +15,4 @@ VignetteBuilder: knitr
 Language: en-US
 LinkingTo: Rcpp, RcppArmadillo
 Depends: R (>= 3.5)
-
+Config/roxygen2/version: 8.1.0

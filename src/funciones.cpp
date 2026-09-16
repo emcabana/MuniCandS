@@ -5,6 +5,29 @@
 #include <cmath>
 using namespace Rcpp;
 
+// [[Rcpp::export]]
+double calc_est(NumericMatrix X, IntegerVector H) {
+  int n = X.nrow();
+  double T = 0.0;
+  
+  for (int h = 0; h < n; ++h) {
+    for (int i = 0; i < n; ++i) {
+      double prod = 1.0;
+      for (int j = 0; j < H.size(); ++j) {
+        int col = H[j] - 1; // Convertir de 1-based (R) a 0-based (C++)
+        double val_h = X(h, col);
+        double val_i = X(i, col);
+        double term = (pow(val_h, 2.0) + pow(val_i, 2.0)) / 2.0 - std::max(val_h, val_i) + 1.0 / 3.0;
+        prod *= term;
+      }
+      T += prod;
+    }
+  }
+  
+  return T / n;
+}
+
+
 
 // [[Rcpp::export]]
 double calc_est_arma(const arma::mat& X, const arma::uvec& H) {
@@ -47,8 +70,8 @@ NumericVector S2Cpi(NumericVector x) {
 
 
 // -------------------------------------------------------------
-// intlin: interpolación lineal escalar
-// -----------------------------------------------------------
+// intlin: interpolación lineal escalar (equivalente al intlin de tu R)
+// -------------------------------------------------------------
  // [[Rcpp::export]]
 double intlin(double x, NumericVector X, NumericVector Y) {
   int n = X.size();
@@ -74,11 +97,11 @@ double intlin(double x, NumericVector X, NumericVector Y) {
   return ((x2 - x) * y1 + (x - x1) * y2) / (x2 - x1);
 }
 
-
 // -----------------------------------------------------------------------------
 // ajus: versión con parámetro entero h
 // devuelve el valor pv definido en tu fórmula
 // -----------------------------------------------------------------------------
+
 // [[Rcpp::export]]
 double ajus(double y, Rcpp::NumericVector Y, int h) {
   int R = Y.size();
@@ -105,14 +128,12 @@ double ajus(double y, Rcpp::NumericVector Y, int h) {
   double la = std::pow(15.0, h) / 2.0;
 
   // valores de distribución gamma
-double q1 = R::pgamma(YS[r],   a, 1.0/la, 0, 0);
-double q2 = R::pgamma(YS[r+1], a, 1.0/la, 0, 0);
-double qy = R::pgamma(y,       a, 1.0/la, 0, 0);
+  double p1 = R::pgamma(YS[r],   a, 1.0/la, /*lower_tail*/0, /*log_p*/0);
+  double p2 = R::pgamma(YS[r+1], a, 1.0/la, /*lower_tail*/0, /*log_p*/0);
+  double pp = R::pgamma(y,       a, 1.0/la, /*lower_tail*/0, /*log_p*/0);
 
-// cálculo del p‑valor
-double pv = (R - r + (qy - q2) / (q1 - q2)) / (R + 1);
-
-
+  // cálculo del p‑valor
+  double pv = (R - r + (p2 - pp) / (p2 - p1)) / (R + 1);
 
   return pv;
 }

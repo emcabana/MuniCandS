@@ -46,7 +46,6 @@
 #' @param hmax Integer. Maximum subset size to include (use \code{Inf} for no upper bound).
 #' @param n_sim Integer. Number of Monte Carlo repetitions for the first simulation.
 #' @param n_mc Integer. Number of Monte Carlo repetitions for the second simulation.
-#' @param n_ort Integer. Number of orthogonal transformations to get invariance under isometries of the sphere.
 #' @param use_parallel Logical. If \code{TRUE}, parallelization is used.
 #' @param cache Optional list containing precomputed Monte Carlo simulations.
 #' @param return_cache Logical. If TRUE, the Monte Carlo simulations are returned for reuse.
@@ -150,36 +149,25 @@ H_list
 )
 }
 
-#---datosobservados---
-pvals<-bHBH2pvals(
-X2bH(Z2X(Z,type),H_list),
-BH,H_list
-)
+  # --- datos observados ---
 
-if(type %in% c("UC","IN","N","E")){
-pvmys0<-pvals2pv(pvals,H_list)
-pvmys<-pvPV2mys(pvmys0,PV)
-}else{
-	PVO<-do.call(rbind,
-lapply_fun(1:n_ort,function(i){
-pvals2pv(
-bHBH2pvals(
-X2bH(Z2X(ort2Z(Z),type),H_list),
-BH,H_list
-),
-H_list
-)
-})
-)
-pvmys<-pvPV2mys(colMeans(PVO),PV)
-}
+  pvals <- bHBH2pvals(
+    X2bH(Z2X(Z, type), H_list),
+    BH, H_list
+  )
+  
 
-names(pvmys)<-c("m-test","s-test")
+  pvmys0 <- pvals2pv(pvals, H_list)
+  pvmys  <- pvPV2mys(pvmys0, PV)
 
-if(graph){
-plot(pvals,ylim=c(0,1),pch=15)
-print(H_list)
-}
+  names(pvmys) <- c("m-test", "s-test")
+  
+
+
+  if (graph && (type %in% c("UC","IN"))) {
+    plot(pvals, ylim = c(0, 1), pch = 15)
+    print(H_list)
+  }
 
 new_cache<-list(
 BH=BH,
@@ -218,6 +206,7 @@ if(type %in% c("US","I")){
 return(ZS)
 }
 
+<<<<<<< HEAD
 	ort2Z=function(Z){
 	p<-ncol(Z)
 	A<-matrix(rnorm(p^2),p,p)
@@ -229,6 +218,9 @@ return(ZS)
 	return(Z%*%t(QU))
 	}
 	
+=======
+
+>>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 Z2X=function(Z,type){
 n<-nrow(Z)
 p<-ncol(Z)
@@ -263,6 +255,7 @@ for(j in 1:p)X[,j]=rank(X[,j])/(n+1)
 return(X)
 }
 
+<<<<<<< HEAD
 Z2X=function(Z,type){
 	n<-nrow(Z)
 p<-ncol(Z)
@@ -273,6 +266,21 @@ if(type=="US"){
 X<-S2C(Z)#matrix(NA,n,p-1)
 #for(i in 1:n)X[i,]<-S2C(Z[i,])
 }
+=======
+  if (type == "US") {
+  	variance <- crossprod(Z) / n
+    eig <- eigen(variance)
+    Z <- Z %*% eig$vectors
+    X <- S2C(Z)
+  }
+
+  if (type == "E") {
+    ZC <- scale(Z, center = TRUE, scale = FALSE)
+    variance <- crossprod(ZC) / n
+    eig <- eigen(variance)
+    Z <- ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors)
+  }
+>>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 
 if(type=="E"){
 ZC<-scale(Z,center=TRUE,scale=FALSE)
@@ -281,6 +289,7 @@ eig<-eigen(variance)
 Z<-ZC%*%eig$vectors%*%diag(1/sqrt(eig$values))%*%t(eig$vectors)/sqrt(n)
 }
 
+<<<<<<< HEAD
 if(type %in% c("I","E")){
 rho<-sqrt(rowSums(Z^2))
 Z0<-Z/rho
@@ -288,6 +297,14 @@ X<-matrix(NA,n,p-1)
 for(i in 1:n)X[i,]<-S2C(Z0[i,])
 X<-cbind(X,rank(rho)/(n+1))
 }
+=======
+  if (type == "N") {
+    ZC <- scale(Z, center = TRUE, scale = FALSE)
+    variance <- crossprod(ZC) / n
+    eig <- eigen(variance)
+    X <- pnorm(ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors))
+  }
+>>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 
 if(type=="N"){
 ZC<-scale(Z,center=TRUE,scale=FALSE)
@@ -311,12 +328,21 @@ X2bH=function(X,H_list){
 }
 
 bHBH2pvals=function(bH,BH,H_list){
+<<<<<<< HEAD
 resu<-numeric(ncol(BH))
 for(i in seq_len(ncol(BH))){
 resu[i]<-ajus(bH[i],sort(BH[,i]),length(H_list[[i]]))
 }
 resu[resu<0]<-0
 return(resu)
+=======
+  resu <- numeric(ncol(BH))
+  for (i in seq_len(ncol(BH))) {
+    resu[i] <- ajus(bH[i], sort(BH[, i]),length(H_list[[i]]))
+  }
+  resu[resu < 0] <- 0
+  return(resu)
+>>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 }
 
 pvals2pv=function(pvals,H_list){
@@ -337,6 +363,7 @@ pvPV2mys=function(pv,PV){
 ###FUNCIONESAUXILIARES
 ##########################################
 
+<<<<<<< HEAD
 evlin<-function(u,f){
 ff<-c(0,sort(f),1)
 
@@ -354,6 +381,12 @@ if(denom==0)return(NA_real_)#evitardivisiónporcero
 res<-((sf+(u-ff[sf])/denom-1)/(length(f)+1))
 }
 return(res)
+=======
+evlin=function(u,f){ff=c(0,sort(f),1)
+	if (u==1) res <- 1 else{sf=max(which(ff<=u))
+	res <- ((sf+(u-ff[sf])/(ff[sf+1]-ff[sf])-1)/(length(f)+1))}
+	return(res)
+>>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)
 }
 
 #GenerationofthesubsetsHofJ={0,1,...,p}
@@ -375,3 +408,15 @@ U<-Cpi2C(S2Cpi(Z))
 }
 return(U)
 }
+<<<<<<< HEAD
+=======
+
+Cpi2S=function(Phi){
+	Phi=c(Phi,0)
+	Z=cos(Phi[1])
+	for(j in 2:(length(Phi)))Z=c(Z,cos(Phi[j])*prod(sin(Phi[1:(j-1)])))
+	return(Z)
+}
+
+
+>>>>>>> 74010aa (Actualiza MuniCandS a la nueva versión)

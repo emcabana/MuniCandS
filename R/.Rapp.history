@@ -87,3 +87,947 @@ Cpi2S=function(Phi){#
 }
 S2C(matrix(c(1,0,0,0,1,0,0,0,1),nrow=3))
 stopifnot(1==3)
+h=4#
+y=2.3#
+Y=rgamma(5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	q1=qgamma(YS[r],a,la)#
+	q2=qgamma(YS[r+1],a,la)#
+	qq=qgamma(y)#
+	pv=(R-r+(q2-qq)/(q2-q1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=2.3#
+Y=rgamma(5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+h=4#
+y=2.3#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=2.3#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=2.3#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+sort(Y)
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)
+plot(c(y,Y),c(.5000393,1:20/21))
+plot(c(y,sort(Y)),c(.5000393,1:20/21))
+plot(sort(Y),1:20/21)#
+lines(y,ajus(y,Y,h),type='p',col='2')
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)#
+#
+plot(sort(Y),(20-1:20)/21)#
+lines(y,ajus(y,Y,h),type='p',col='2')
+plot(sort(Y),(20-1:20)/21)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+lines(y+.000002,ajus(y+.000002,Y,h),type='p',col='2'))
+plot(sort(Y),(20-1:20)/21)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+lines(y+.000002,ajus(y+.000002,Y,h),type='p',col='2')
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)#
+#
+plot(sort(Y),(20-1:20)/21)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+lines(y+.00002,ajus(y+.00002,Y,h),type='p',col='2')
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)#
+#
+plot(sort(Y),(20-1:20)/21)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+lines(y+.00001,ajus(y+.00001,Y,h),type='p',col='2')
+Y
+sort(Y)
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)#
+#
+plot(sort(Y),(20-1:20)/21)#
+lines(0.00075,ajus(0.00075,Y,h),type='p',col='2')#
+lines(0.00076,ajus(0.00076,Y,h),type='p',col='2')
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)#
+#
+plot(sort(Y),(20-1:20)/21)#
+lines(0.00079,ajus(0.00079,Y,h),type='p',col='2')#
+lines(0.00080,ajus(0.00080,Y,h),type='p',col='2')
+ajusold <- function(y, Y) {#
+  Len <- length(Y)#
+  if (Len < 2) return(NA_real_)#
+  # indi = (1:Len)/(Len+1)#
+  indi <- (1:Len) / (Len + 1)#
+  # X = qchisq(indi, df=1)#
+  X <- qchisq(indi, df = 1)#
+  # L1 = round(.3*Len), L2 = round(.95*Len)#
+  L1 <- round(0.3 * Len)#
+  L2 <- round(0.95 * Len)#
+  L1 <- max(1, min(L1, Len))#
+  L2 <- max(1, min(L2, Len))#
+  if (L2 < L1) L2 <- L1#
+  XM <- X[L1:L2]#
+  YM <- Y[L1:L2]#
+  MX <- mean(XM)#
+  MY <- mean(YM)#
+  num <- sum((XM - MX) * (YM - MY))#
+  den <- sum((XM - MX)^2)#
+  bb <- ifelse(den == 0, 0, num / den)#
+  aa <- MY - bb * MX#
+  YY <- Y#
+  XM_first <- XM[1]#
+  XM_last  <- XM[length(XM)]#
+  denom_mix <- XM_last - XM_first#
+  for (j in seq_len(Len)) {#
+    Xj <- X[j]#
+    if (Xj < XM_first) {#
+      YY[j] <- Y[j]#
+    } else if (Xj > XM_last) {#
+      YY[j] <- aa + bb * Xj#
+    } else {#
+      v1 <- Y[j]#
+      v2 <- aa + bb * Xj#
+      if (denom_mix == 0) {#
+        YY[j] <- 0.5 * (v1 + v2)#
+      } else {#
+        w1 <- (XM_last - Xj)#
+        w2 <- (Xj - XM_first)#
+        YY[j] <- (w1 * v1 + w2 * v2) / denom_mix#
+      }#
+    }#
+  }#
+  YY_last <- YY[Len]#
+  if (y > YY_last) {#
+    xval <- if (bb == 0) y - aa else (y - aa) / bb#
+  } else {#
+    # interpolación lineal#
+    pos <- which(YY >= y)[1]#
+    if (is.na(pos)) {#
+      xval <- NA_real_#
+    } else if (YY[pos] == y) {#
+      xval <- X[pos]#
+    } else {#
+      i1 <- max(1, pos - 1)#
+      i2 <- pos#
+      xval <- ((YY[i2] - y) * X[i1] + (y - YY[i1]) * X[i2]) / (YY[i2] - YY[i1])#
+    }#
+  }#
+  pval <- pchisq(xval, df = 1)#
+  return(1 - pval)#
+}#
+ajus <- function(y,Y,h){#
+	R=length(Y)#
+	YS=c(0,sort(Y),Inf)#
+	r=max(which(YS<=y))#
+	a=5^h/2^(h+1)#
+	la=15^h/2#
+	p1=pgamma(YS[r],a,la)#
+	p2=pgamma(YS[r+1],a,la)#
+	pp=pgamma(y,a,la)#
+	pv=(R-r+(p2-pp)/(p2-p1))/(R+1)#
+	return(pv)#
+}#
+#
+h=4#
+y=0.00076#
+Y=rgamma(20,5^h/2^(h+1),15^h/2)#
+ajusold(y,Y)#
+ajus(y,Y,h)#
+#
+plot(sort(Y),(20-1:20)/21)#
+y=rgamma(1,5^h/2^(h+1),15^h/2)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+y=rgamma(1,5^h/2^(h+1),15^h/2)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+y=rgamma(1,5^h/2^(h+1),15^h/2)#
+lines(y,ajus(y,Y,h),type='p',col='2')#
+lines(0.00080,ajus(0.00080,Y,h),type='p',col='2')
+pgamma(Inf,5^h/2^(h+1),15^h/2)
+genlist=function(hmin,hmax,p){#
+  H_list <- list()#
+  for (h in max(1,hmin):min(hmax, p)) {#
+    H_list <- c(H_list, combn(p, h, simplify = FALSE))#
+  }#
+  return(H_list)#
+}
+H_list=genlist(2,4,5)
+Hlist
+H_list
+H_list[4]
+H_list[[4]]
