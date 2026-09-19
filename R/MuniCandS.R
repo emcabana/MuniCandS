@@ -93,6 +93,7 @@ MuniCandS <- function(
   px <- if (type == "US") p - 1 else p
 
   H_list <- genlist(hmin, hmax, px)
+  if(type %in% c("I","E") && hmin==1) H_list <- H_list[-p]
 
   # --- validar cache ---
   valid_cache <- FALSE
