@@ -100,5 +100,5 @@ MuniCandS(Z, type = "UC", n_sim=100, n_mc = 100)
 \references{
 Cabana, A. and Cabana, E. M. (2025).
 Brownian sheet and uniformity tests on the hypercube.
-arXiv:2509.06134.
+Statistica vol. 85(1) 3-18.
 }
