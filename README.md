@@ -153,8 +153,7 @@ res2 <- MuniCandS(
 ## Reference
 
 Cabaña, A. and Cabaña, E. M. (2025). *Brownian sheet and uniformity tests on
-the hypercube*. To appear in *Statistica*. arXiv:2509.06134.
-<https://arxiv.org/abs/2509.06134>
+the hypercube*, *Statistica* Vol. 85 No. 1, 3-18.
 
 ## Authors
 
