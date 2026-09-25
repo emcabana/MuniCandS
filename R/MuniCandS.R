@@ -92,6 +92,8 @@ MuniCandS <- function(
   p <- ncol(Z)
   px <- if (type == "US") p - 1 else p
 
+if (type == 'IN') hmin <- max(hmin, 2)
+
   H_list <- genlist(hmin, hmax, px)
   if(type %in% c("I","E") && hmin==1) H_list <- H_list[-p]
 
