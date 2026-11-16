@@ -7,7 +7,7 @@ Description: Implements multivariate tests of uniformity on the hypercube and hy
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-Imports: Rcpp, mvtnorm, future.apply
+Imports: Rcpp, mvtnorm, future.apply, expm
 Suggests: knitr, rmarkdown
 URL: https://github.com/emcabana/MuniCandS
 BugReports: https://github.com/emcabana/MuniCandS/issues
@@ -15,4 +15,4 @@ VignetteBuilder: knitr
 Language: en-US
 LinkingTo: Rcpp, RcppArmadillo
 Depends: R (>= 3.5)
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1

@@ -87,6 +87,7 @@ MuniCandS <- function(
   stopifnot(is.matrix(Z))
   stopifnot(type %in% c("UC","US","N","I","E","IN"))
 
+if(type=="E")return_cache <- FALSE
 
   n <- nrow(Z)
   p <- ncol(Z)
@@ -123,7 +124,8 @@ if (type == 'IN') hmin <- max(hmin, 2)
   } else {
     BH <- do.call(rbind,
       lapply_fun(1:n_sim, function(i) {
-        X2bH(Z2X(G2Z(n, p, type), type), H_list)
+      	if (type == "E") prep=prep_E(Z) else prep=NULL
+        X2bH(Z2X(G2Z(n, p, type,Z,prep), type), H_list)
       })
     )
   }
@@ -134,9 +136,10 @@ if (type == 'IN') hmin <- max(hmin, 2)
   } else {
     PV <- do.call(rbind,
       lapply_fun(1:n_mc, function(i) {
+      	if (type == "E") prep=prep_E(Z) else prep=NULL
         pvals2pv(
           bHBH2pvals(
-            X2bH(Z2X(G2Z(n, p, type), type), H_list),
+            X2bH(Z2X(G2Z(n, p, type,Z,prep), type), H_list),
             BH, H_list
           ),
           H_list
@@ -186,20 +189,25 @@ if (type == 'IN') hmin <- max(hmin, 2)
 ### FUNCIONES BASICAS 
 ##########################################
 
-G2Z=function(n,p,type){
-	 if(type %in% c("E","N")){
-  	ZS <- matrix(stats::rnorm(n*p),n,p)
-  }
-  if(type %in% c("UC","IN")){
-    ZS <- matrix(runif(n * p), n, p)
-    }
-  if(type%in% c("US","I")){
-  	 ZS=matrix(stats::rnorm(n*p),n,p)
-  	 if(type=="US")ZS=ZS/sqrt(rowSums(ZS^2))
-  }
-return(ZS)
+prep_E <- function(Z) {
+  h <- hr_estimate(Z)
+  list(r = h$r, Sh = h$Vh)          # radios estandarizados y V^{1/2}
 }
 
+G2Z <- function(n, p, type, Z, prep = NULL) {
+  if (type %in% c("UC", "IN")) ZS <- matrix(runif(n * p), n, p)
+  if (type %in% c("US", "I", "N")) {
+    ZS <- matrix(stats::rnorm(n * p), n, p)
+    if (type == "US") ZS <- ZS / sqrt(rowSums(ZS^2))
+  }
+  if (type == "E") {
+    if (is.null(prep)) prep <- prep_E(Z)
+    ZS <- matrix(stats::rnorm(n * p), n, p)
+    ZS <- ZS * (sample(prep$r, n) / sqrt(rowSums(ZS^2)))
+    ZS <- ZS %*% prep$Sh
+  }
+  ZS
+}
 
 Z2X=function(Z,type){
 	  n <- nrow(Z)
@@ -214,19 +222,17 @@ Z2X=function(Z,type){
     X <- S2C(Z)
   }
 
-  if (type == "E") {
-    ZC <- scale(Z, center = TRUE, scale = FALSE)
-    variance <- crossprod(ZC) / n
-    eig <- eigen(variance)
-    Z <- ZC %*% eig$vectors %*% diag(1 / sqrt(eig$values)) %*% t(eig$vectors)
-  }
+  if (type == "E") Z <- hr_estimate(Z)$Z
 
   if (type %in% c("I","E")) {
     rho <- sqrt(rowSums(Z^2))
     Z0 <- Z / rho
+    var=t(Z0)%*%Z0/n
+    eig=eigen(var)
+    Z0=Z0%*%eig$vectors
     X <- matrix(NA, n, p-1)
     for (i in 1:n) X[i, ] <- S2C(Z0[i, ])
-    X <- cbind(X, rank(rho) / (n + 1))
+    X <- cbind(X, rank(rho,ties.method = "random") / (n + 1))
   }
 
   if (type == "N") {
@@ -237,7 +243,7 @@ Z2X=function(Z,type){
   }
 
  if (type == 'IN') {
-  	for(j in 1:p) X[,j]=rank(X[,j])/(n+1)
+  	for(j in 1:p) X[,j]=rank(X[,j],ties.method = "random")/(n+1)
   }
 
   return(X)
@@ -310,4 +316,15 @@ Cpi2S=function(Phi){
 	return(Z)
 }
 
-
+tyler_shape <- function(X, tol = 1e-6, maxit = 200) {
+  n <- nrow(X); p <- ncol(X)
+  S <- diag(p)
+  for (k in 1:maxit) {
+    d <- rowSums((X %*% solve(S)) * X)
+    S_new <- (p / n) * t(X) %*% (X / d)
+    S_new <- S_new / det(S_new)^(1/p)
+    if (max(abs(S_new - S)) < tol) break
+    S <- S_new
+  }
+  S
+}

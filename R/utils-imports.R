@@ -2,4 +2,5 @@
 #' @importFrom utils combn
 #' @importFrom parallel mclapply detectCores
 #' @importFrom mvtnorm rmvnorm pmvnorm
+#' @importFrom expm sqrtm
 NULL

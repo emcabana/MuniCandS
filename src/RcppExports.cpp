@@ -83,6 +83,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// hr_cpp
+Rcpp::List hr_cpp(const arma::mat& X, double tol, int maxit);
+RcppExport SEXP _MuniCandS_hr_cpp(SEXP XSEXP, SEXP tolSEXP, SEXP maxitSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< int >::type maxit(maxitSEXP);
+    rcpp_result_gen = Rcpp::wrap(hr_cpp(X, tol, maxit));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_MuniCandS_calc_est", (DL_FUNC) &_MuniCandS_calc_est, 2},
@@ -91,6 +104,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MuniCandS_intlin", (DL_FUNC) &_MuniCandS_intlin, 3},
     {"_MuniCandS_ajus", (DL_FUNC) &_MuniCandS_ajus, 3},
     {"_MuniCandS_Cpi2C", (DL_FUNC) &_MuniCandS_Cpi2C, 1},
+    {"_MuniCandS_hr_cpp", (DL_FUNC) &_MuniCandS_hr_cpp, 3},
     {NULL, NULL, 0}
 };
 

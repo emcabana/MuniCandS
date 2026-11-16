@@ -25,3 +25,7 @@ Cpi2C <- function(phi) {
     .Call(`_MuniCandS_Cpi2C`, phi)
 }
 
+hr_cpp <- function(X, tol = 1e-6, maxit = 500L) {
+    .Call(`_MuniCandS_hr_cpp`, X, tol, maxit)
+}
+
